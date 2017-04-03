@@ -8,7 +8,7 @@ import signal
 import concurrent.futures
 import os
 
-RESPONSE_FILE_PATH = "./testfiles/test1r.xml"
+RESPONSE_FILE_PATH = "./serverres100.xml"
 
 
 class LoadtestServer():

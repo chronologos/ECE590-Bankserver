@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <results>
-  <success ref="c1">created</success>
-  <success ref="c2">created</success>
-  <success ref="c3">created</success>
-  <success ref="c4">created</success>
-  <success ref="1">transferred</success>
+  <success ref="random ref">created</success>
+  <success ref="1">created</success>
   <success ref="2">transferred</success>
-  <success ref="3">transferred</success>
-  <success ref="xyz">9622.33</success>
+  <randomtag ref="3">transferred</randomtag>
+  <success ref="xyz">1e</success>
+  <error ref="e1">random error text should not matter</error>
+  <success ref="e2">tag mismatch!</success>
   <results ref="4">
     <transfer>
       <from>1234</from>

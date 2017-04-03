@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <results>
-  <success ref="c1">created</success>
-  <success ref="c2">created</success>
-  <success ref="c3">created</success>
   <success ref="c4">created</success>
   <success ref="1">transferred</success>
   <success ref="2">transferred</success>
   <success ref="3">transferred</success>
-  <success ref="xyz">9622.33</success>
+  <success ref="xyz">0</success>
+  <success ref="abc">0.0001</success>
+  <error ref="e1">different error text</error>
+  <error ref="e2">error</error>
   <results ref="4">
     <transfer>
       <from>1234</from>
