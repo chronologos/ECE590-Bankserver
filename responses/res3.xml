@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<results>
+  <success ref="c4">created</success>
+  <success ref="1">transferred</success>
+  <success ref="2">transferred</success>
+  <success ref="3">transferred</success>
+  <success ref="xyz">0</success>
+  <success ref="abc">0.0001</success>
+  <error ref="e1">different error text</error>
+  <error ref="e2">error</error>
+  <results ref="4">
+    <transfer>
+      <from>1234</from>
+      <to>1001</to>
+      <amount>100.34</amount>
+      <tags>
+        <tag>food</tag>
+      </tags>
+    </transfer>
+    <transfer>
+      <from>1234</from>
+      <to>5678</to>
+      <amount>345.67</amount>
+      <tags>
+        <tag>saving</tag>
+      </tags>
+    </transfer>
+  </results>
+</results>
