@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<transactions reset="true">
+  <create ref="0">
+    <account>es0</account>
+    <balance>5</balance>
+  </create>
+  <create ref="1">
+    <account>xpqqxmuncc1</account>
+    <balance>5</balance>
+  </create>
+</transactions>

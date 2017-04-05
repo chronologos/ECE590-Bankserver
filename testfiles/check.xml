@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<transactions>
+  <balance ref="es0">
+    <account>es0</account>
+  </balance>
+  <balance ref="xpqqxmuncc1">
+    <account>xpqqxmuncc1</account>
+  </balance>
+</transactions>

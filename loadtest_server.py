@@ -8,7 +8,7 @@ import signal
 import concurrent.futures
 import os
 
-RESPONSE_FILE_PATH = "./serverres100.xml"
+RESPONSE_FILE_PATH = "./serverres.xml"
 
 
 class LoadtestServer():
@@ -36,7 +36,7 @@ class LoadtestServer():
 
             # get request from client
             read_size = clientSocket.recv(8)
-            read_size_unpacked = struct.unpack("q", read_size)[0]
+            read_size_unpacked = struct.unpack("!q", read_size)[0]
             # result is a tuple even if it contains one item
             print("server: got a connection from %s" % str(addr))
             print ("server: expecting xml file of size {0}".format(read_size_unpacked))
@@ -47,7 +47,7 @@ class LoadtestServer():
 
             # after calculations, respond to client
             print("server: replying with size {0} packet".format(self.size))
-            clientSocket.sendall(struct.pack("q", self.size))
+            clientSocket.sendall(struct.pack("!q", self.size))
             l = self.response_file.read(self.size)  # TODO
             while (l):
                 clientSocket.sendall(l)

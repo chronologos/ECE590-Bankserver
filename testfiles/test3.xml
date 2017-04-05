@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<transactions reset="true">
-  <create ref="c1">
-    <account>invalid_account_name</account>
-    <balance>500</balance>
-  </create>
-</transactions>

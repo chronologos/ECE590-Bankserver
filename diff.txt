@@ -1,5 +1,0 @@
-diffTrees output at 2017-04-03 19:12:58.960352
-<ref='random ref'> not found.
-<ref='3'> tag mismatch: got 'success' but expected 'randomtag'
-<ref='xyz'> text mismatch in <success>: got '0' but expected '1e'
-<ref='e2'> tag mismatch: got 'error' but expected 'success'
