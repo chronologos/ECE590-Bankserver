@@ -20,6 +20,35 @@ using namespace std;
  *  The xerces-C DOM parser infrastructure is initialized.
  */
 
+
+ void ParserErrorHandler::reportParseException(const xercesc::SAXParseException& ex)
+ {
+   char* msg = XMLString::transcode(ex.getMessage());
+   fprintf(stderr, "at line %llu column %llu, %s\n",
+           ex.getLineNumber(), ex.getColumnNumber(), msg);
+   XMLString::release(&msg);
+ }
+
+ void ParserErrorHandler::warning(const xercesc::SAXParseException& ex)
+ {
+     reportParseException(ex);
+ }
+
+ void ParserErrorHandler::error(const xercesc::SAXParseException& ex)
+ {
+     reportParseException(ex);
+ }
+
+ void ParserErrorHandler::fatalError(const xercesc::SAXParseException& ex)
+ {
+     reportParseException(ex);
+ }
+
+ void ParserErrorHandler::resetErrors()
+ {
+ }
+
+
 Parse::Parse() {
   try {
     XMLPlatformUtils::Initialize(); // Initialize Xerces infrastructure
@@ -34,15 +63,35 @@ Parse::Parse() {
   // Can't call transcode till after Xerces Initialize()
   TAG_root = XMLString::transcode("root");
   TAG_create = XMLString::transcode("create");
-  TAG_transfer = XMLString::transcode("transfer");
   TAG_balance = XMLString::transcode("balance");
   TAG_query = XMLString::transcode("query");
   TAG_account = XMLString::transcode("account");
+  ATTR_reset = XMLString::transcode("reset");
+  ATTR_ref = XMLString::transcode("ref");
+  emptyRef = XMLString::transcode("");
+  resetTrue = XMLString::transcode("true");
+
+  TAG_transfer = XMLString::transcode("transfer");
+  TAG_from = XMLString::transcode("from");
+  TAG_to = XMLString::transcode("to");
+  TAG_amount = XMLString::transcode("amount");
+  TAG_tag = XMLString::transcode("tag");
+
   m_FileParser = new XercesDOMParser;
-  createRequests = std::vector<std::pair<long long, double>>();
-  requestTuple = std::pair<long long, double>();
+  // ParserErrorHandler parserErrorHandler;
+
+  creates = std::vector<std::tuple<long long, double, std::string>>();
+  requestTuple = std::tuple<long long, double, std::string>();
   accSet = false;
   balSet = false;
+  reset = false;
+  balanceRef = "";
+  balances = std::vector<std::tuple<long long, std::string>>();
+  struct Transfer currentTransfer;
+  transfers = std::vector<Transfer>();
+  // vector of (ref * from * to * amout * [tags] )
+
+
   // requestTuple holds the current create request as a
   // (account no * balance) tuple.
 }
@@ -116,42 +165,60 @@ void Parse::readFile(string &configFile) throw(std::runtime_error) {
   }
 
   // Configure DOM parser.
+  if (m_FileParser->loadGrammar("./bank.xsd", Grammar::SchemaGrammarType) == NULL){
+        fprintf(stderr, "couldn't load schema\n");
+        return;
+  }
 
-  m_FileParser->setValidationScheme(XercesDOMParser::Val_Never);
+  // m_FileParser->setErrorHandler(&parserErrorHandler);
+  m_FileParser->setValidationScheme(XercesDOMParser::Val_Auto);
   m_FileParser->setDoNamespaces(false);
   m_FileParser->setDoSchema(false);
-  m_FileParser->setLoadExternalDTD(false);
+  // m_FileParser->setValidationConstraintFatal(true);
   // auto m_OptionA = 1;
   // auto m_OptionB = 1;
 
   try {
     m_FileParser->parse(configFile.c_str());
+    if (m_FileParser->getErrorCount() != 0){
+      cout << "XML file does not conform to schema: " << m_FileParser->getErrorCount() << " errors found." << endl;
+      return;
+    }
 
     // no need to free this pointer - owned by the parent parser object
     DOMDocument *xmlDoc = m_FileParser->getDocument();
-
-    // Get the top-level element: Name is "transactions". No attributes for
-    // "root"
     DOMElement *elementRoot = xmlDoc->getDocumentElement();
     if (!elementRoot)
       throw(std::runtime_error("empty XML document"));
+    if (XMLString::equals(elementRoot->getAttribute(ATTR_reset), resetTrue)){
+       reset = true;
+    }
 
     DOMNodeList *children = elementRoot->getChildNodes();
     const XMLSize_t nodeCount = children->getLength();
 
-    cout << "nodecount is " << to_string(nodeCount) << endl;
-    // For all nodes, children of "root" in the XML tree.
     for (XMLSize_t i = 0; i < nodeCount; ++i) {
       DOMNode *currentNode = children->item(i);
-      cout << "currentNode is " << XMLString::transcode(currentNode->getNodeName()) << endl;
+      cout << "current node is " << XMLString::transcode(currentNode->getNodeName()) << endl;
       if (isElem(currentNode)) {
         Parse::parseElemNode(currentNode);
       }
       cout << "------------------------" << endl;
     }
-    cout << "Done! Printing final createRequests vector:" << endl;
-    for (auto i : createRequests){
-      cout << "(" << i.first << "," << i.second << ")" << endl;
+    // DEBUG PRINTS
+    cout << "Done! Printing final creates vector:" << endl;
+    for (auto i : creates){
+      cout << "(" << std::get<0>(i) << "," << std::get<1>(i) << "," << std::get<2>(i) << ")" << endl;
+    }
+    cout << "Printing final balances vector:" << endl;
+    for (auto i : balances){
+      cout << "(" << std::get<0>(i) << "," << std::get<1>(i) << ")" << endl;
+    }
+    cout << "reset is " << (reset? "true" : "false") << endl;
+    cout << "Printing final transfers vector:" << endl;
+    for (auto i : transfers){
+      cout << "ref: " << i.ref << " from: " << i.from << " to: " << i.to << " amount: " << i.amount << endl;
+      cout << "tags:" << endl;
     }
   }
 
@@ -162,12 +229,13 @@ void Parse::readFile(string &configFile) throw(std::runtime_error) {
     XMLString::release(&message);
   }
 }
-void Parse::parseTextNode(DOMNode *currentNode) {
-  cout << "Text detected in currentNode:" << endl;
-  DOMText *currentTextData =
-      dynamic_cast<xercesc::DOMText *>(currentNode);
-  cout << XMLString::transcode(currentTextData->getWholeText()) << endl;
-}
+
+// void Parse::parseTextNode(DOMNode *currentNode) {
+//   cout << "Text detected in currentNode:" << endl;
+//   DOMText *currentTextData =
+//       dynamic_cast<xercesc::DOMText *>(currentNode);
+//   cout << XMLString::transcode(currentTextData->getWholeText()) << endl;
+// }
 
 bool Parse::isElem(DOMNode *node){
   return (node->getNodeType() && node->getNodeType() == DOMNode::ELEMENT_NODE);
@@ -177,70 +245,158 @@ bool Parse::isText(DOMNode *node){
   return (node->getNodeType() && node->getNodeType() == DOMNode::TEXT_NODE);
 }
 
-
 void Parse::parseElemNode(DOMNode *node){
   // Found node which is an Element. Re-cast node as element
   DOMElement *currentElement = dynamic_cast<xercesc::DOMElement *>(node);
-  cout << "current Element is " << XMLString::transcode(currentElement->getTagName()) << endl;
+  DOMNodeList *children = node->getChildNodes();
+  const XMLSize_t count = children->getLength();
+
   if (XMLString::equals(currentElement->getTagName(), TAG_create)) {
-    cout << "TAG_create found" << endl;
-    DOMNodeList *createChildren = node->getChildNodes();
-    const XMLSize_t createNodeCount = createChildren->getLength();
-    for (XMLSize_t j = 0; j < createNodeCount; ++j) {
-      DOMNode *currentSubnode = createChildren->item(j);
-      if (isElem(currentSubnode)) // is element
-      {
-        DOMElement *currentsubElement = dynamic_cast<xercesc::DOMElement *>(currentSubnode);
-        if (XMLString::equals(currentsubElement->getTagName(),TAG_account)) {
-          cout << "TAG_account found" << endl;
-          // TODO
-          const XMLCh* accountNumber = parseLeafElem(currentSubnode);
-          static char* accountNumberStr = XMLString::transcode(accountNumber);
+    const XMLCh* ref = currentElement->getAttribute(ATTR_ref);
+    if (!XMLString::equals(ref, emptyRef)){
+      char * refStr = XMLString::transcode(ref);
+      requestTuple = std::make_tuple(0, 0, refStr);
+      XMLString::release(&refStr);
+    }
+    for (XMLSize_t i = 0; i < count; ++i) {
+      parseCreateElemNode(children->item(i));
+    }
+  }
 
-          if (accSet == true){
-            cout << "ERROR, accountNumber was previously set." << endl;
-            balSet = false;
-            accSet = false;
+  else if (XMLString::equals(currentElement->getTagName(), TAG_balance)){
+    const XMLCh* ref = currentElement->getAttribute(ATTR_ref);
+    balanceRef = XMLString::transcode(ref);
+    for (XMLSize_t i = 0; i < count; ++i) {
+      parseBalanceElemNode(children->item(i));
+    }
+  }
 
-          }
-          else {
-            requestTuple = std::make_pair(std::stoll(accountNumberStr), requestTuple.second);
-            accSet = true;
-            if (balSet && accSet) {
-              cout << "requestTuple is " << requestTuple.first << " " << requestTuple.second << endl;
-              createRequests.push_back(requestTuple);
-              balSet = false;
-              accSet = false;
-            }
-          }
-          // XMLString::release(&accountNumberStr);
-        }
-        else if (XMLString::equals(currentsubElement->getTagName(), TAG_balance)) {
-          cout << "TAG_balance found" << endl;
-          // TODO
-          const XMLCh* balance = parseLeafElem(currentSubnode);
-          static char* balanceStr = XMLString::transcode(balance);
-          if (balSet == true){
-            cout << "ERROR, balance was previously set." << endl;
-            balSet = false;
-            accSet = false;
-          }
-          else {
-            requestTuple = std::make_pair(requestTuple.first, std::stod(balanceStr));
-            balSet = true;
-            if (balSet && accSet) {
-              cout << "requestTuple is " << requestTuple.first << " " << requestTuple.second << endl;
-              createRequests.push_back(requestTuple);
-              balSet = false;
-              accSet = false;
-            }
-          }
-          // XMLString::release(&balanceStr);
-        }
+  else if (XMLString::equals(currentElement->getTagName(), TAG_transfer)) {
+    const XMLCh* ref = currentElement->getAttribute(ATTR_ref);
+    transferRef = XMLString::transcode(ref);
+    currentTransfer.ref=transferRef;
+    if (isElem(node)) {
+      for (XMLSize_t i = 0; i < count; ++i) {
+        parseTransferElemNode(children->item(i));
       }
+      transfers.push_back(currentTransfer);
+      struct Transfer currentTransfer;
     }
   }
 }
+
+void Parse::parseBalanceElemNode(DOMNode *node){
+  if (isElem(node)){
+    const XMLCh* accountNumber = parseLeafElem(node);
+    char* accountNumberStr = XMLString::transcode(accountNumber);
+    balances.push_back(std::make_tuple(stoll(accountNumberStr), balanceRef));
+  }
+}
+
+void Parse::parseCreateElemNode(DOMNode *node){
+  if (isElem(node)){
+    DOMElement *currentElement = dynamic_cast<xercesc::DOMElement *>(node);
+    if (XMLString::equals(currentElement->getTagName(),TAG_account)) {
+      cout << "TAG_account found" << endl;
+
+      // TODO
+      const XMLCh* accountNumber = parseLeafElem(node);
+      char* accountNumberStr = XMLString::transcode(accountNumber);
+      if (accSet == true){
+        cout << "ERROR, accountNumber was previously set." << endl;
+        balSet = false;
+        accSet = false;
+        requestTuple = std::make_tuple(0, 0, "");
+      }
+      else {
+        double second = std::get<1>(requestTuple);
+        requestTuple = std::make_tuple(std::stoll(accountNumberStr), second, std::get<2>(requestTuple));
+        // cout << "accountNumberStr is " << accountNumberStr << endl;
+
+        accSet = true;
+        if (balSet && accSet) {
+          cout << "requestTuple is " << std::get<0>(requestTuple) << " " << std::get<1>(requestTuple) << endl;
+          creates.push_back(requestTuple);
+          balSet = false;
+          accSet = false;
+          requestTuple = std::make_tuple(0, 0, "");
+
+        }
+      }
+      cout << "releasing" << endl;
+      XMLString::release(&accountNumberStr);
+
+    }
+    else if (XMLString::equals(dynamic_cast<xercesc::DOMElement *>(node->getParentNode())->getTagName(), TAG_create)){
+      const XMLCh* balance = parseLeafElem(node);
+      char* balanceStr = XMLString::transcode(balance);
+      if (balSet == true){
+        cout << "ERROR, balance was previously set." << endl;
+        balSet = false;
+        accSet = false;
+        requestTuple = std::make_tuple(0, 0, "");
+      }
+      else {
+        long long first = std::get<0>(requestTuple);
+        requestTuple = std::make_tuple(first, std::stod(balanceStr), std::get<2>(requestTuple));
+        balSet = true;
+        if (balSet && accSet) {
+          cout << "requestTuple is " << std::get<0>(requestTuple) << " " << std::get<1>(requestTuple)<< endl;
+          creates.push_back(requestTuple);
+          balSet = false;
+          accSet = false;
+          requestTuple = std::make_tuple(0, 0, "");
+        }
+      }
+      cout << "releasing" << endl;
+      XMLString::release(&balanceStr);
+    }
+  }
+}
+
+void Parse::parseTransferElemNode(DOMNode *node){
+  // Found node which is an Element. Re-cast node as element
+  cout << "im in " << endl;
+  if (isElem(node)){
+    DOMElement *currentElement = dynamic_cast<xercesc::DOMElement *>(node);
+
+    if (XMLString::equals(currentElement->getTagName(), TAG_amount)) {
+      const XMLCh* transferAmount = parseLeafElem(node);
+      char* transferAmountStr = XMLString::transcode(transferAmount);
+      cout << "transferring: " << transferAmountStr << endl;
+      currentTransfer.amount = stod(transferAmountStr);
+      XMLString::release(&transferAmountStr);
+    }
+    else if (XMLString::equals(currentElement->getTagName(), TAG_from)) {
+      const XMLCh* from = parseLeafElem(node);
+      char* fromStr = XMLString::transcode(from);
+      cout << "from:" << fromStr << endl;
+      currentTransfer.from = stoll(fromStr);
+      XMLString::release(&fromStr);
+    }
+    else if (XMLString::equals(currentElement->getTagName(), TAG_to)) {
+      const XMLCh* to = parseLeafElem(node);
+      char* toStr = XMLString::transcode(to);
+      cout << "to: " << toStr << endl;
+      currentTransfer.to = stoll(toStr);
+      XMLString::release(&toStr);
+    }
+    else if (XMLString::equals(currentElement->getTagName(), TAG_tag)) {
+      const XMLCh* tag = parseLeafElem(node);
+      char* tagStr = XMLString::transcode(tag);
+      cout << "tag: " << tagStr << endl;
+      currentTransfer.tags.push_back(tagStr);
+      XMLString::release(&tagStr);
+    }
+    else {
+      cout << "??" << endl;
+    }
+  }
+  else {
+    cout << "?" << endl;
+  }
+}
+
 
 const XMLCh* Parse::parseLeafElem(DOMNode *node){
   DOMNodeList *children = node->getChildNodes();
@@ -256,12 +412,12 @@ const XMLCh* Parse::parseLeafElem(DOMNode *node){
   // DOMElement *elem = dynamic_cast<xercesc::DOMElement *>(node);
 }
 
-
 #ifdef MAIN_TEST
 /* This main is provided for unit test of the class. */
 
+
 int main() {
-  string configFile = "./testfiles/primer.xml"; // file to parse. Get ambigious
+  string configFile = "./testfiles/x0.xml"; // file to parse. Get ambigious
                                                 // segfault otherwise.
   Parse parser;
   parser.readFile(configFile);
