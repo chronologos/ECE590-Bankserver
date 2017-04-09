@@ -1,8 +1,31 @@
-<?xml version='1.0' encoding='UTF-8'?>
+<?xml version="1.0" encoding="UTF-8"?>
 <transactions>
   <transfer ref="0">
-    <from>es0</from>
-    <amount>0</amount>
-    <to>xpqqxmuncc1</to>
+    <from>10982938</from>
+    <amount>1.011</amount>
+    <to>99192939</to>
+    <tag>tag1</tag>
+    <tag>tag2</tag>
+  </transfer>
+  <create ref="1">
+    <account>10982938</account>
+    <balance>5.22</balance>
+  </create>
+  <create ref="2">
+    <account>99192939</account>
+    <balance>11111.5</balance>
+  </create>
+  <balance ref="3">
+    <account>99192939</account>
+  </balance>
+  <balance ref="4">
+    <account>10982938</account>
+  </balance>
+  <transfer ref="5">
+    <from>123</from>
+    <amount>100</amount>
+    <to>321</to>
+    <tag>tag3</tag>
+    <tag>tag4</tag>
   </transfer>
 </transactions>

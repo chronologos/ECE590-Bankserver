@@ -179,6 +179,8 @@ void Parse::readFile(string &configFile) throw(std::runtime_error) {
   // auto m_OptionB = 1;
 
   try {
+    // xercesc::MemBufInputSource myxml_buf(myxml.c_str(), myxml.size(),
+    //                                      "myxml (in memory)");
     m_FileParser->parse(configFile.c_str());
     if (m_FileParser->getErrorCount() != 0){
       cout << "XML file does not conform to schema: " << m_FileParser->getErrorCount() << " errors found." << endl;
