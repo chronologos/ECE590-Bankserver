@@ -1,11 +1,6 @@
-CC := gcc
-CXX := g++
-LD := g++
-CXXFLAGS := -O3
-LDFLAGS := -O3
+CC=g++
+CFLAGS=-std=c++11 -g
+EXTRAFLAGS=-lpqxx -lpq
 
-CXXFLAGS += -I/usr/local/include
-LDFLAGS += -L/usr/local/lib
-
-parse: parse.cpp
-	$(LD) $(LDFLAGS) -g -Wall -pedantic -o parse parse.cpp -lxerces-c -lnsl -lpthread
+parse: combo.cpp
+	g++ -g -Wall -pedantic -L/usr/local/lib -I/usr/local/include -o combo combo.cpp /usr/local/lib/libxerces-c.a -lpthread -lxerces-c -DMAIN_TEST $(EXTRAFLAGS)

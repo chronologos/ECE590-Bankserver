@@ -12,10 +12,13 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <pqxx/pqxx>
 
 #include "parse.hpp"
+#include "db.h"
 
 using namespace std;
+using namespace pqxx;
 using namespace xercesc;
 
 int main(int argc, char *argv[])
@@ -104,7 +107,7 @@ int main(int argc, char *argv[])
   }
 
   Parse parser;
-  parser.readFile(&recData);
+  parser.readFile(&recData, true);
 
 //Parsing calls here
  

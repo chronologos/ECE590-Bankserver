@@ -69,7 +69,8 @@ public:
    void parseCreateElemNode(xercesc::DOMNode *node);
    void parseBalanceElemNode(xercesc::DOMNode *node);
    
-   std::vector<std::tuple<long long, double, std::string>> creates;
+   std::vector<std::tuple<long long, double, std::string>> creates; // iterate over this
+   // vector of tuple(account * amount * ref)
    std::tuple<long long, double, std::string> requestTuple;
    struct Transfer{
      std::string ref;
@@ -78,10 +79,12 @@ public:
      double amount;
      std::vector<std::string> tags;
    };
-   std::vector<Transfer> transfers;
+   std::vector<Transfer> transfers; // iterate over this
    Transfer currentTransfer;
    bool reset;
-
+   std::vector<std::tuple<long long, std::string>> balances; //iterate over this
+   // vector of tuple(account * ref)
+   
 private:
    xercesc::XercesDOMParser *m_FileParser;
   //  ParserErrorHandler parserErrorHandler;
@@ -127,7 +130,7 @@ private:
 
    std::string balanceRef;
    std::string transferRef;
-   std::vector<std::tuple<long long, std::string>> balances;
+//   std::vector<std::tuple<long long, std::string>> balances;
 
 
 };
