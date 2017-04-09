@@ -123,7 +123,7 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
   struct stat fileStatus;
 
   errno = 0;
-  if (stat(configFile.c_str(), &fileStatus) == -1) // ==0 ok; ==-1 error
+  if (!isString && stat(configFile.c_str(), &fileStatus) == -1) // ==0 ok; ==-1 error
   {
     if (errno == ENOENT) // errno declared by include file errno.h
       throw(std::runtime_error(
@@ -140,10 +140,10 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
   }
 
   // Configure DOM parser.
-  if (m_FileParser->loadGrammar("./bank.xsd", Grammar::SchemaGrammarType) == NULL){
-        fprintf(stderr, "couldn't load schema\n");
-        return;
-  }
+  //if (m_FileParser->loadGrammar("./bank.xsd", Grammar::SchemaGrammarType) == NULL){
+        //fprintf(stderr, "couldn't load schema\n");
+        //return;
+  //}
 
   // m_FileParser->setErrorHandler(&parserErrorHandler);
   m_FileParser->setValidationScheme(XercesDOMParser::Val_Auto);
