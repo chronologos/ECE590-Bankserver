@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
 
   uint64_t recSize = 1;
 
-  int count = 0;
+  uint64_t count = 0;
 
   std::string recData;
   
@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
   }
 
   Parse parser;
-  parser.readFile(&recData, true);
+  parser.readFile(recData, true);
 
 //Parsing calls here
  
@@ -116,7 +116,7 @@ int main(int argc, char *argv[])
  
  connection *C;
  
- if (parser.reset == TRUE){
+ if (parser.reset == true){
     C = dbRun(1);
  }
  

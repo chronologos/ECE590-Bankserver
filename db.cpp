@@ -4,44 +4,13 @@
 #include <pqxx/pqxx>
 #include <string>
 #include "db.h"
-#include "exerciser.h"
+//#include "exerciser.h"
 //#include "query_funcs.h"
 
 using namespace std;
 using namespace pqxx;
 
-void parseAccount (connection *C) {
-  string line, attr;
-  int count = 0;
-  vector<string> v;
-  ifstream accountFile ("accounts.txt");
-  if (accountFile.is_open()) {
-    while (getline (accountFile, line)) {
-      if (line.empty()) {
-	continue;}
-      stringstream ss(line);
-      while (getline(ss, attr, ' ')) {
-	v.push_back(attr);
-      }
-      count++;
-    }
-  }
-  else {
-    cout << "Unable to open file." << endl;
-  }
-  int i = 0;
-  //int team_id = 0;
-  for(i; i < count; i++) {
-    int set = i * 3;
-    long unsigned int accountNum = stoi(v[set+1]);
-    double balance = stoi(v[set+2]);
-    //Find way to check that balance exist?
-    add_account(C, accountNum, balance);
-  }
-  accountFile.close();
-}
-
-int dbRun (int reset) {
+connection * dbRun (int reset) {
   //Allocate & initialize a Postgres connection object
   connection *C;
   
@@ -56,11 +25,11 @@ int dbRun (int reset) {
       cout << "Opened database successfully: " << C->dbname() << endl;
     } else {
       cout << "Can't open database" << endl;
-      return 1;
+      //return 1;
     }
   } catch (const std::exception &e){
     cerr << e.what() << std::endl;
-    return 1;
+    //return 1;
   }
 
   //TODO: create ACCOUNT and TRANSFERS in the BANK database
@@ -89,7 +58,6 @@ int dbRun (int reset) {
   aString = "CREATE TABLE ACCOUNTS("		      \
     "ACCOUNT_NUM BIGINT PRIMARY KEY  NOT NULL,"	      \
     "BALANCE                 FLOAT   NOT NULL);";
-  //"TRANSFER_ID             INT     NOT NULL);";	\
 
   tString = "CREATE TABLE TRANSFERS("
     "TRANSFER_ID SERIAL PRIMARY KEY      NOT NULL,"
