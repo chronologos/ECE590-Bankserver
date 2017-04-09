@@ -21,32 +21,7 @@ using namespace std;
  */
 
 
- void ParserErrorHandler::reportParseException(const xercesc::SAXParseException& ex)
- {
-   char* msg = XMLString::transcode(ex.getMessage());
-   fprintf(stderr, "at line %llu column %llu, %s\n",
-           ex.getLineNumber(), ex.getColumnNumber(), msg);
-   XMLString::release(&msg);
- }
 
- void ParserErrorHandler::warning(const xercesc::SAXParseException& ex)
- {
-     reportParseException(ex);
- }
-
- void ParserErrorHandler::error(const xercesc::SAXParseException& ex)
- {
-     reportParseException(ex);
- }
-
- void ParserErrorHandler::fatalError(const xercesc::SAXParseException& ex)
- {
-     reportParseException(ex);
- }
-
- void ParserErrorHandler::resetErrors()
- {
- }
 
 
 Parse::Parse() {
@@ -142,7 +117,7 @@ Parse::~Parse() {
  */
 
 
-void Parse::readFile(string &configFile) throw(std::runtime_error) {
+void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error) {
   // Test to see if the file is ok.
 
   struct stat fileStatus;
@@ -179,9 +154,14 @@ void Parse::readFile(string &configFile) throw(std::runtime_error) {
   // auto m_OptionB = 1;
 
   try {
-    // xercesc::MemBufInputSource myxml_buf(myxml.c_str(), myxml.size(),
-    //                                      "myxml (in memory)");
-    m_FileParser->parse(configFile.c_str());
+    if (isString){
+      xercesc::MemBufInputSource myxml_buf((const XMLByte*)configFile.c_str(), configFile.size(),
+                                           "configFile (in memory)");
+      m_FileParser->parse(myxml_buf);
+    }
+    else{
+      m_FileParser->parse(configFile.c_str());
+    }
     if (m_FileParser->getErrorCount() != 0){
       cout << "XML file does not conform to schema: " << m_FileParser->getErrorCount() << " errors found." << endl;
       return;
@@ -413,16 +393,15 @@ const XMLCh* Parse::parseLeafElem(DOMNode *node){
   }
   // DOMElement *elem = dynamic_cast<xercesc::DOMElement *>(node);
 }
+// #ifdef MAIN_TEST
+// /* This main is provided for unit test of the class. */
 
-#ifdef MAIN_TEST
-/* This main is provided for unit test of the class. */
 
-
-int main() {
-  string configFile = "./testfiles/x0.xml"; // file to parse. Get ambigious
-                                                // segfault otherwise.
-  Parse parser;
-  parser.readFile(configFile);
-  return 0;
-}
-#endif
+// int main() {
+//   string configFile = "./testfiles/x0.xml"; // file to parse. Get ambigious
+//                                                 // segfault otherwise.
+//   Parse parser;
+//   parser.readFile(configFile);
+//   return 0;
+// }
+// #endif

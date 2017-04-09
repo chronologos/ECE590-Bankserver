@@ -1,2 +1,11 @@
+CC := gcc
+CXX := g++
+LD := g++
+CXXFLAGS := -O3
+LDFLAGS := -O3
+
+CXXFLAGS += -I/usr/local/include
+LDFLAGS += -L/usr/local/lib
+
 parse: parse.cpp
-	g++ -g -Wall -pedantic -L/usr/local/lib -I/usr/local/include -o parse parse.cpp /usr/local/lib/libxerces-c.a -lpthread -lxerces-c -DMAIN_TEST
+	$(LD) $(LDFLAGS) -g -Wall -pedantic -o parse parse.cpp -lxerces-c -lnsl -lpthread

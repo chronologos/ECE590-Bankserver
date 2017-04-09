@@ -18,6 +18,7 @@
 #include <xercesc/util/XMLString.hpp>
 #include <xercesc/parsers/XercesDOMParser.hpp>
 #include <xercesc/framework/LocalFileInputSource.hpp>
+#include <xercesc/framework/MemBufInputSource.hpp>
 #include <xercesc/sax/ErrorHandler.hpp>
 #include <xercesc/sax/SAXParseException.hpp>
 #include <xercesc/validators/common/Grammar.hpp>
@@ -40,24 +41,24 @@ enum {
    ERROR_EMPTY_DOCUMENT
 };
 
-class ParserErrorHandler: public xercesc::ErrorHandler
-{
-public:
-  void warning(const xercesc::SAXParseException&);
-  void error(const xercesc::SAXParseException&);
-  void fatalError(const xercesc::SAXParseException&);
-  void resetErrors();
+// class ParserErrorHandler: public xercesc::ErrorHandler
+// {
+// public:
+//   void warning(const xercesc::SAXParseException&);
+//   void error(const xercesc::SAXParseException&);
+//   void fatalError(const xercesc::SAXParseException&);
+//   void resetErrors();
 
-private:
-  void reportParseException(const xercesc::SAXParseException&);
-};
+// private:
+//   void reportParseException(const xercesc::SAXParseException&);
+// };
 
 class Parse
 {
 public:
    Parse();
   ~Parse();
-   void readFile(std::string&) throw(std::runtime_error);
+   void readFile(std::string&, bool isString) throw(std::runtime_error);
   //  void parseTextNode(xercesc::DOMNode *currentNode);
    void parseElemNode(xercesc::DOMNode *node);
    bool isElem(xercesc::DOMNode *node);
@@ -67,7 +68,19 @@ public:
    void parseTransferElemNode(xercesc::DOMNode *node);
    void parseCreateElemNode(xercesc::DOMNode *node);
    void parseBalanceElemNode(xercesc::DOMNode *node);
-
+   
+   std::vector<std::tuple<long long, double, std::string>> creates;
+   std::tuple<long long, double, std::string> requestTuple;
+   struct Transfer{
+     std::string ref;
+     long long from;
+     long long to;
+     double amount;
+     std::vector<std::string> tags;
+   };
+   std::vector<Transfer> transfers;
+   Transfer currentTransfer;
+   bool reset;
 
 private:
    xercesc::XercesDOMParser *m_FileParser;
@@ -94,19 +107,19 @@ private:
    XMLCh* TAG_account;
 
 
-   bool reset;
+//   bool reset;
 
-   std::vector<std::tuple<long long, double, std::string>> creates;
-   std::tuple<long long, double, std::string> requestTuple;
-   struct Transfer{
-     std::string ref;
-     long long from;
-     long long to;
-     double amount;
-     std::vector<std::string> tags;
-   };
-   std::vector<Transfer> transfers;
-   Transfer currentTransfer;
+//   std::vector<std::tuple<long long, double, std::string>> creates;
+//   std::tuple<long long, double, std::string> requestTuple;
+//   struct Transfer{
+//      std::string ref;
+//      long long from;
+//      long long to;
+//      double amount;
+//      std::vector<std::string> tags;
+//   };
+//   std::vector<Transfer> transfers;
+//   Transfer currentTransfer;
 
    // vector of (ref * from * to * amout * [tags] )
    bool accSet;
