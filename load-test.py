@@ -53,7 +53,7 @@ class LoadTest():
 
                     # send request to server
                     print("sending request of size of {0}".format(tfile_size))
-                    s.sendall(struct.pack("!q", tfile_size))
+                    s.sendall(struct.pack("!Q", tfile_size))
 
                     l = tfile.read(tfile_size)  # TODO is this needed
                     while (l):
@@ -63,7 +63,7 @@ class LoadTest():
                     # read response from serve
                     res_read_size = s.recv(8)
                     res_read_size_unpacked = struct.unpack(
-                        "!q", res_read_size)[0]
+                        "!Q", res_read_size)[0]
                     print("expecting response of size {0}".format(
                         res_read_size_unpacked))
                     res_xml = s.recv(res_read_size_unpacked)

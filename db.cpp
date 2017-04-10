@@ -13,10 +13,10 @@ using namespace pqxx;
 connection * dbRun (int reset) {
   //Allocate & initialize a Postgres connection object
   connection *C;
-  
+
   string aString;
   string tString;
-  
+
   try{
     //Establish a connection to the database
     //Parameters: database name, user name, user password
@@ -39,7 +39,7 @@ connection * dbRun (int reset) {
   if (reset == 1) {
     //create transactional object
     work aD(*C);
-    aString = "DROP TABLE IF EXISTS accounts"; 
+    aString = "DROP TABLE IF EXISTS accounts";
     //Execute SQL query
     aD.exec(aString);
     aD.commit();
@@ -53,7 +53,7 @@ connection * dbRun (int reset) {
 
     cout << "Table successfully dropped." << endl;
   }
-  
+
   // Create Tables
   aString = "CREATE TABLE ACCOUNTS("		      \
     "ACCOUNT_NUM BIGINT PRIMARY KEY  NOT NULL,"	      \
@@ -73,14 +73,14 @@ connection * dbRun (int reset) {
   work tW(*C);
   tW.exec( tString );
   tW.commit();
-  
+
   cout << "Table created successfully" << endl;
 
 
   //Parse .txt files and insert
   //parseAccount(C);
   //exercise(C);
-  
+
 
 
   return C;

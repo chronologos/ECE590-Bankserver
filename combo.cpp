@@ -1,3 +1,14 @@
+#if defined(__linux__)
+#  include <endian.h>
+#elif defined(__FreeBSD__) || defined(__NetBSD__)
+#  include <sys/endian.h>
+#elif defined(__OpenBSD__)
+#  include <sys/types.h>
+#  define be16toh(x) betoh16(x)
+#  define be32toh(x) betoh32(x)
+#  define be64toh(x) betoh64(x)
+#endif
+
 #include <iostream>
 #include <cstring>
 #include <sys/socket.h>
@@ -27,7 +38,7 @@ int main(int argc, char *argv[])
   struct addrinfo host_info;
   struct addrinfo *host_info_list;
   const char *hostname = NULL;
-  const char *port     = "44444";
+  const char *port     = "12345";
 
   memset(&host_info, 0, sizeof(host_info));
 
@@ -80,7 +91,7 @@ int main(int argc, char *argv[])
   //after accept, pthread create
 
   //while loop counter, parse number in the beginning
-  char buffer[1024];
+  char buffer[4096];
 
   uint64_t recSize = 1;
 
@@ -96,17 +107,23 @@ int main(int argc, char *argv[])
       count += (temp - 8);
       recData = buffer+8;
       recSize = *(uint64_t*)buffer;
+      recSize = be64toh(recSize);
+      cout << recSize << endl;
     }
+
     else {
       count += temp;
-      recData += buffer;
+      recData += buffer; // TODO, somhow this ends up mangled...
       cout << endl << "Still here" << endl;
     }
     //cout << endl << "recSize:" << recSize << endl;
   }
+  cout << recData << endl;
+  cout << buffer << endl;
 
   Parse parser;
-  parser.readFile(recData, true);
+  string str(buffer);
+  parser.readFile(str, true);
 
 //Parsing calls here
 

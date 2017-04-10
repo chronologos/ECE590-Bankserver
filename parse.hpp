@@ -1,10 +1,10 @@
 #ifndef XML_PARSER_HPP
 #define XML_PARSER_HPP
 /**
- *  @file
- *  Class "GetConfig" provides the functions to read the XML data.
- *  @version 1.0
- */
+*  @file
+*  Class "GetConfig" provides the functions to read the XML data.
+*  @version 1.0
+*/
 #include <xercesc/dom/DOM.hpp>
 #include <xercesc/dom/DOMDocument.hpp>
 #include <xercesc/dom/DOMDocumentType.hpp>
@@ -35,10 +35,10 @@
 // Error codes
 
 enum {
-   ERROR_ARGS = 1,
-   ERROR_XERCES_INIT,
-   ERROR_PARSE,
-   ERROR_EMPTY_DOCUMENT
+  ERROR_ARGS = 1,
+  ERROR_XERCES_INIT,
+  ERROR_PARSE,
+  ERROR_EMPTY_DOCUMENT
 };
 
 class ParserErrorHandler: public xercesc::ErrorHandler
@@ -56,72 +56,75 @@ private:
 class Parse
 {
 public:
-   Parse();
+  Parse();
   ~Parse();
-   void readFile(std::string&, bool) throw(std::runtime_error);
+  void readFile(std::string&, bool) throw(std::runtime_error);
   //  void parseTextNode(xercesc::DOMNode *currentNode);
-   void parseElemNode(xercesc::DOMNode *node);
-   bool isElem(xercesc::DOMNode *node);
-   bool isText(xercesc::DOMNode *node);
-   const XMLCh* parseLeafElem(xercesc::DOMNode *node);
 
-   void parseTransferElemNode(xercesc::DOMNode *node);
-   void parseCreateElemNode(xercesc::DOMNode *node);
-   void parseBalanceElemNode(xercesc::DOMNode *node);
-   bool reset;
-   std::vector<std::tuple<long long, std::string>> balances;
-   std::vector<std::tuple<long long, double, std::string>> creates;
-   struct Transfer{
-     std::string ref;
-     long long from;
-     long long to;
-     double amount;
-     std::vector<std::string> tags;
-   };
-   std::vector<Transfer> transfers;
+
+  bool reset;
+  std::vector<std::tuple<long long, std::string>> balances;
+  std::vector<std::tuple<long long, double, std::string>> creates;
+  struct Transfer{
+    std::string ref;
+    long long from;
+    long long to;
+    double amount;
+    std::vector<std::string> tags;
+  };
+  std::vector<Transfer> transfers;
 private:
-   xercesc::XercesDOMParser *m_FileParser;
+  xercesc::XercesDOMParser *m_FileParser;
+  void parseElemNode(xercesc::DOMNode *node);
+  bool isElem(xercesc::DOMNode *node);
+  bool isText(xercesc::DOMNode *node);
+  const XMLCh* parseLeafElem(xercesc::DOMNode *node);
+  void parseTransferElemNode(xercesc::DOMNode *node);
+  void parseCreateElemNode(xercesc::DOMNode *node);
+  void parseBalanceElemNode(xercesc::DOMNode *node);
+  void parseQueryElemNode(xercesc::DOMNode *node);
+
   //  ParserErrorHandler parserErrorHandler;
-   // Internal class use only. Hold Xerces data in UTF-16 SMLCh type.
-   XMLCh* TAG_root;
-   XMLCh* ATTR_reset;
-   XMLCh* resetTrue;
-   XMLCh* ATTR_ref;
-   XMLCh* emptyRef;
+  // Internal class use only. Hold Xerces data in UTF-16 SMLCh type.
+  XMLCh* TAG_root;
+  XMLCh* ATTR_reset;
+  XMLCh* resetTrue;
+  XMLCh* ATTR_ref;
+  XMLCh* emptyRef;
 
 
-   XMLCh* TAG_create;
-   XMLCh* TAG_account;
-   XMLCh* TAG_balance;
+  XMLCh* TAG_create;
+  XMLCh* TAG_account;
+  XMLCh* TAG_balance;
 
-   XMLCh* TAG_transfer;
-   XMLCh* TAG_from;
-   XMLCh* TAG_to;
-   XMLCh* TAG_amount;
-   XMLCh* TAG_tag;
-
-
-
-   XMLCh* TAG_query;
-   XMLCh* TAG_and;
-   XMLCh* TAG_or;
-   XMLCh* TAG_not;
-   XMLCh* TAG_equals;
-   XMLCh* TAG_less;
-   XMLCh* TAG_greater;
+  XMLCh* TAG_transfer;
+  XMLCh* TAG_from;
+  XMLCh* TAG_to;
+  XMLCh* TAG_amount;
+  XMLCh* TAG_tag;
 
 
-   std::tuple<long long, double, std::string> requestTuple;
 
-   Transfer currentTransfer;
-   // vector of (ref * from * to * amout * [tags] )
+  XMLCh* TAG_query;
+  XMLCh* TAG_and;
+  XMLCh* TAG_or;
+  XMLCh* TAG_not;
+  XMLCh* TAG_equals;
+  XMLCh* TAG_less;
+  XMLCh* TAG_greater;
 
-   bool accSet;
-   bool balSet;
 
-   std::string balanceRef;
+  std::tuple<long long, double, std::string> requestTuple;
 
-   std::string transferRef;
+  Transfer currentTransfer;
+  // vector of (ref * from * to * amout * [tags] )
+
+  bool accSet;
+  bool balSet;
+
+  std::string balanceRef;
+
+  std::string transferRef;
 
 
 
