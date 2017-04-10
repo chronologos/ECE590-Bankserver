@@ -286,8 +286,13 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
       }
 
       else if (XMLString::equals(currentElement->getTagName(), TAG_query)) {
+        if (true){
+          return;
+        }
         cout << "parsing query" << endl;
         Query query = {}; //empty struct
+        query.ready = false;
+        query.leaf = NULL;
         const XMLCh* ref = currentElement->getAttribute(ATTR_ref);
         query.ref=XMLString::transcode(ref);
         if (isElem(node)) {
@@ -301,7 +306,6 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
       }
     }
 
-
     void Parse::parseBalanceElemNode(DOMNode *node){
       if (isElem(node)){
         const XMLCh* accountNumber = parseLeafElem(node);
@@ -309,7 +313,6 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
         balances.push_back(std::make_tuple(stoll(accountNumberStr), balanceRef));
       }
     }
-
     void Parse::parseCreateElemNode(DOMNode *node){
       if (isElem(node)){
         DOMElement *currentElement = dynamic_cast<xercesc::DOMElement *>(node);
@@ -413,7 +416,7 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
     }
 
     // fn to construct query strings
-    Parse::LeafQuery Parse::parseQueryRelop(DOMNode *node, LeafQuery lq, std::string op){
+    void Parse::parseQueryRelop(DOMNode *node, LeafQuery *lq, std::string op){
       DOMElement *currentElement = dynamic_cast<xercesc::DOMElement *>(node);
       char *fromStr = XMLString::transcode(currentElement->getAttribute(TAG_from));
       char *toStr = XMLString::transcode(currentElement->getAttribute(TAG_to));
@@ -426,77 +429,115 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
       // XMLString::release(&amtStr);
       std::string empty = "";
       if (fstr != empty){
-        lq.query += "(origin " + op + " " + fstr + ")";
-        lq.ready = true;
-        return lq;
+        cout << "in parseQueryRelopA" << endl;
+
+        lq->query = "(origin " + op + " " + fstr + ") ";
+        // lq.ready = true;
       }
       else if (tstr != empty){
-        lq.query += "(destination " + op + " " + tstr + ")";
-        lq.ready = true;
-        return lq;
+        cout << "in parseQueryRelopB" << endl;
+
+        lq->query = "(destination " + op + " " + tstr + ") ";
+        // lq.ready = true;
+        printf("lq pointer %p\n",lq);
       }
       else if (astr != empty){
-        lq.query += "(amount " + op + " " + amtStr + ")";
-        lq.ready = true;
-        return lq;
+        cout << "in parseQueryRelopC" << endl;
+
+        lq->query = "(amount " + op + " " + amtStr + ") ";
+        // lq.ready = true;
       }
     }
 
     void Parse::parseQueryElemNode(DOMNode *node, Query &query) {
       if (isElem(node)){
-        cout << "in parseQueryElemNode" << endl;
 
         DOMElement *currentElement = dynamic_cast<xercesc::DOMElement *>(node);
         DOMNodeList *children = node->getChildNodes();
         const XMLSize_t count = children->getLength();
-        cout << "in parseQueryElemNode2" << endl;
 
 
         // RELOPS
         if (XMLString::equals(currentElement->getTagName(), TAG_greater)) {
-          LeafQuery lq = {};
-          lq = parseQueryRelop(node, lq, ">");
-          query.leaf = lq;
+          if (!query.ready){
+            LeafQuery *lq = new LeafQuery();
+            query.leaf = lq;
+            lq->query = "";
+            query.ready = true;
+          }
+          parseQueryRelop(node, query.leaf, ">");
           cout << "in parseQueryElemNode4a" << endl;
         }
         else if (XMLString::equals(currentElement->getTagName(), TAG_equals)) {
-          LeafQuery lq = {};
-          lq = parseQueryRelop(node, lq, "=");
-          query.leaf = lq;
+          if (!query.ready){
+            query.leaf = new LeafQuery();
+            query.leaf->query = "";
+            query.ready = true;
+            printf("or pointer in parse is %p\n",query);
+
+          }
+          printf("query.leaf->query pointer %p\n",query.leaf->query);
+
+          parseQueryRelop(node, query.leaf, "=");
+          cout << query.leaf->query << endl;
           cout << "in parseQueryElemNode4b" << endl;
         }
         else if (XMLString::equals(currentElement->getTagName(), TAG_less)) {
-          LeafQuery lq = {};
-          lq = parseQueryRelop(node, lq, "<");
-          query.leaf = lq;
-          cout << "in parseQueryElemNode4c" << endl;
+          if (!query.ready){
+            LeafQuery *lq = new LeafQuery();
+            lq->query = "";
+            query.leaf = lq;
+            query.ready = true;
 
+
+          }
+          parseQueryRelop(node, query.leaf, "<");
+          cout << "in parseQueryElemNode4c" << endl;
         }
 
         else if (XMLString::equals(currentElement->getTagName(), TAG_tag)) {
           char *tag = XMLString::transcode(currentElement->getAttribute(TAG_info));
           query.tags.push_back(tag);
+          cout << "in parseQueryElemNode4d" << endl;
+
           // XMLString::release(&tagStr);
         }
 
         else if (XMLString::equals(currentElement->getTagName(), TAG_and)) {
           Query newQuery = {}; //empty struct
-          query.andQueries.push_back(newQuery);
-          parseQueryElemNode(int *node, Parse::Query &query)
+          newQuery.ready = false;
+          query.andQueries.push_back(std::ref(newQuery));
+
+          cout << "in and" << endl;
+          for (XMLSize_t i = 0; i < count; ++i) {
+            parseQueryElemNode(children->item(i), newQuery);
+          }
+
         }
         else if (XMLString::equals(currentElement->getTagName(), TAG_or)) {
-          currentQuery.query += " OR ("
+          Query newQuery = {}; //empty struct
+          newQuery.ready = false;
+
+          query.orQueries.push_back(std::ref(newQuery));
+          cout << "in or" << endl;
+          printf("or pointer is %p",newQuery);
+          for (XMLSize_t i = 0; i < count; ++i) {
+            parseQueryElemNode(children->item(i), newQuery);
+          }
+
         }
         else if (XMLString::equals(currentElement->getTagName(), TAG_not)) {
-          currentQuery.query += " NOT ("
-        }
-        for (XMLSize_t i = 0; i < count; ++i) {
-          cout << "in parseQueryElemNode3loop" << endl;
-          parseQueryElemNode(children->item(i), query);
-        }
+          Query newQuery = {}; //empty struct
+          newQuery.ready = false;
+          query.notQueries.push_back(std::ref(newQuery));
+          cout << "in not" << endl;
 
-        currentQuery.query += ")"
+          for (XMLSize_t i = 0; i < count; ++i) {
+            parseQueryElemNode(children->item(i), newQuery);
+          }
 
+        }
+        // query.leaf->query += ")";
       }
     }
 
@@ -515,30 +556,77 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
       // DOMElement *elem = dynamic_cast<xercesc::DOMElement *>(node);
     }
 
-    std::string Parse::translateQuery(Parse::Query q){
+    std::string Parse::translateQuery(Parse::Query &q){
+      cout << "in translateQuery" << endl;
       std::string res = "SELECT * FROM transfers WHERE ";
-      if (q.tags.size()>0){
-        for (auto i: q.tags){
-          res += "(tags = " + i + ") AND ";
+      auto tsize = q.tags.size();
+      for (auto i=0; i<tsize; i++){
+        if (i!=0){
+          res += "AND ";
         }
+        res += "(tags = " + q.tags[i] + ") ";
       }
 
-      if (q.leaf.ready) {
-        res += q.leaf.query;
-        res += " AND ";
+      if (q.ready) {
+        if (tsize > 0){
+          res += "AND ";
+        }
+        res += q.leaf->query;
       }
+      cout << "ok" << endl;
 
-      res += translateQueryInner(q.andQueries, res);
-      res += translateQueryInner(q.orQueries, res);
-      res += translateQueryInner(q.notQueries, res);
+      auto andSize = q.andQueries.size();
+      auto orSize = q.orQueries.size();
+      auto notSize = q.notQueries.size();
+      if (andSize>0){
+        string s = "";
+        res += "AND (";
+        res += translateQueryInner(q.andQueries, s, "AND");
+        res += ") ";
+      }
+      if (orSize>0){
+        string s = "";
+        res += "OR (";
+        res += translateQueryInner(q.orQueries, s, "OR");
+        res += ") ";
+
+      }
+      if (notSize>0){
+        string s = "";
+        res += "NOT (";
+        res += translateQueryInner(q.notQueries, s, "NOT");
+        res += ") ";
+
+      }
       return res;
     }
 
-    std::string Parse::translateQueryInner(std::vector<Parse::Query> q, std::string res){
+    std::string Parse::translateQueryInner(std::vector<std::reference_wrapper<Parse::Query>> qq, std::string res, std::string op){
       // auto andSize = q.andQueries.size();
       // auto orSize = q.orQueries.size();
-      // auto notSize = q.notQueries.size();
-      return "";
+      cout << qq.size() << endl;
+      cout << op << endl;
+      for (auto i = 0; i<qq.size(); i++){
+        printf("or pointer in translate is %p\n",qq[i].get());
+
+        if (qq[i].get().ready) {
+          cout << "?" << endl;
+          printf("leaf pointer in translate is %p",qq[i].get().leaf->query);
+
+          res += (qq[i].get().leaf)->query;
+
+          res += "WUT";
+        }
+        else {
+          cout << "no leaf in this array???" << endl;
+        }
+        if (i>0){
+          res += op;
+          res += " ";
+        }
+        return res;
+      }
+      return res;
     }
 
 
