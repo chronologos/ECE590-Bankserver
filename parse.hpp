@@ -30,6 +30,7 @@
 #include <stdexcept>
 #include <tuple>
 #include <utility>
+#include <functional>
 #include <vector>
 
 // Error codes
@@ -59,15 +60,15 @@ public:
 
   struct LeafQuery{
     std::string query;
-    bool ready;
   };
 
   struct Query{
     std::string ref;
-    std::vector<Query> andQueries;
-    std::vector<Query> orQueries;
-    std::vector<Query> notQueries;
-    LeafQuery leaf;
+    std::vector<std::reference_wrapper<Query>> andQueries;
+    std::vector<std::reference_wrapper<Query>> orQueries;
+    std::vector<std::reference_wrapper<Query>> notQueries;
+    LeafQuery *leaf;
+    bool ready;
     std::vector<std::string> tags;
   };
 
@@ -76,7 +77,7 @@ public:
   std::vector<std::tuple<long long, double, std::string>> creates;
   std::vector<Transfer> transfers;
   std::vector<Query> queries;
-  std::string translateQuery(Query q);
+  std::string translateQuery(Query &q);
 
 private:
   xercesc::XercesDOMParser *m_FileParser;
@@ -88,8 +89,8 @@ private:
   void parseCreateElemNode(xercesc::DOMNode *node);
   void parseBalanceElemNode(xercesc::DOMNode *node);
   void parseQueryElemNode(xercesc::DOMNode *node, Query &query);
-  LeafQuery parseQueryRelop(xercesc::DOMNode *node, LeafQuery lq, std::string op);
-  std::string translateQueryInner(std::vector<Query> q, std::string res);
+  void parseQueryRelop(xercesc::DOMNode *node, LeafQuery *lq, std::string op);
+  std::string translateQueryInner(std::vector<std::reference_wrapper<Query>> qq, std::string res, std::string op);
 
   //  ParserErrorHandler parserErrorHandler;
   // Internal class use only. Hold Xerces data in UTF-16 SMLCh type.
