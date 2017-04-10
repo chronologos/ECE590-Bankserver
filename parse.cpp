@@ -21,7 +21,32 @@ using namespace std;
  */
 
 
+ void ParserErrorHandler::reportParseException(const xercesc::SAXParseException& ex)
+ {
+   char* msg = XMLString::transcode(ex.getMessage());
+   fprintf(stderr, "at line %llu column %llu, %s\n",
+           ex.getLineNumber(), ex.getColumnNumber(), msg);
+   XMLString::release(&msg);
+ }
 
+ void ParserErrorHandler::warning(const xercesc::SAXParseException& ex)
+ {
+     reportParseException(ex);
+ }
+
+ void ParserErrorHandler::error(const xercesc::SAXParseException& ex)
+ {
+     reportParseException(ex);
+ }
+
+ void ParserErrorHandler::fatalError(const xercesc::SAXParseException& ex)
+ {
+     reportParseException(ex);
+ }
+
+ void ParserErrorHandler::resetErrors()
+ {
+ }
 
 
 Parse::Parse() {
@@ -40,6 +65,12 @@ Parse::Parse() {
   TAG_create = XMLString::transcode("create");
   TAG_balance = XMLString::transcode("balance");
   TAG_query = XMLString::transcode("query");
+  TAG_and = XMLString::transcode("and");
+  TAG_or = XMLString::transcode("or");
+  TAG_not = XMLString::transcode("not");
+  TAG_equals = XMLString::transcode("equals");
+  TAG_less = XMLString::transcode("less");
+  TAG_greater = XMLString::transcode("greater");
   TAG_account = XMLString::transcode("account");
   ATTR_reset = XMLString::transcode("reset");
   ATTR_ref = XMLString::transcode("ref");
@@ -90,6 +121,29 @@ Parse::~Parse() {
     XMLString::release(&TAG_transfer);
     XMLString::release(&TAG_balance);
     XMLString::release(&TAG_query);
+    XMLString::release(&TAG_root);
+    XMLString::release(&ATTR_reset);
+    XMLString::release(&resetTrue);
+    XMLString::release(&ATTR_ref);
+    XMLString::release(&emptyRef);
+
+    XMLString::release(&TAG_create);
+    XMLString::release(&TAG_account);
+    XMLString::release(&TAG_balance);
+
+    XMLString::release(&TAG_transfer);
+    XMLString::release(&TAG_from);
+    XMLString::release(&TAG_to);
+    XMLString::release(&TAG_amount);
+    XMLString::release(&TAG_tag);
+
+    XMLString::release(&TAG_query);
+    XMLString::release(&TAG_and);
+    XMLString::release(&TAG_or);
+    XMLString::release(&TAG_not);
+    XMLString::release(&TAG_equals);
+    XMLString::release(&TAG_less);
+    XMLString::release(&TAG_greater);
 
   } catch (...) {
     cerr << "Unknown exception encountered in TagNamesdtor" << endl;
@@ -140,10 +194,10 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
   }
 
   // Configure DOM parser.
-  //if (m_FileParser->loadGrammar("./bank.xsd", Grammar::SchemaGrammarType) == NULL){
-        //fprintf(stderr, "couldn't load schema\n");
-        //return;
-  //}
+  if (m_FileParser->loadGrammar("./bank.xsd", Grammar::SchemaGrammarType) == NULL){
+        fprintf(stderr, "couldn't load schema\n");
+        return;
+  }
 
   // m_FileParser->setErrorHandler(&parserErrorHandler);
   m_FileParser->setValidationScheme(XercesDOMParser::Val_Auto);
@@ -166,7 +220,6 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
       cout << "XML file does not conform to schema: " << m_FileParser->getErrorCount() << " errors found." << endl;
       return;
     }
-
     // no need to free this pointer - owned by the parent parser object
     DOMDocument *xmlDoc = m_FileParser->getDocument();
     DOMElement *elementRoot = xmlDoc->getDocumentElement();
@@ -393,10 +446,11 @@ const XMLCh* Parse::parseLeafElem(DOMNode *node){
   }
   // DOMElement *elem = dynamic_cast<xercesc::DOMElement *>(node);
 }
+
 // #ifdef MAIN_TEST
 // /* This main is provided for unit test of the class. */
-
-
+//
+//
 // int main() {
 //   string configFile = "./testfiles/x0.xml"; // file to parse. Get ambigious
 //                                                 // segfault otherwise.

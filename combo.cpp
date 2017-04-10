@@ -12,13 +12,12 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <pqxx/pqxx>
 
 #include "parse.hpp"
 #include "db.h"
 
+
 using namespace std;
-using namespace pqxx;
 using namespace xercesc;
 
 int main(int argc, char *argv[])
@@ -85,14 +84,14 @@ int main(int argc, char *argv[])
 
   uint64_t recSize = 1;
 
-  uint64_t count = 0;
+  int count = 0;
 
   std::string recData;
-  
+
   //Keep recieving until buffer matches size of XML file
-  while (count < recSize) {    
+  while (count < recSize) {
     int temp = recv(client_connection_fd, buffer, 1024, 0);
-    
+
     if (recSize == 1) {
       count += (temp - 8);
       recData = buffer+8;
@@ -110,27 +109,27 @@ int main(int argc, char *argv[])
   parser.readFile(recData, true);
 
 //Parsing calls here
- 
- 
+
+
  //DB Set-up, if reset == True, drop all tables
- 
+
  connection *C;
- 
+
  if (parser.reset == true){
     C = dbRun(1);
  }
- 
+
  else {
     C = dbRun(0);
  }
-     
+
 //Send response back to the client
   std::string test = "Got your message"; //Test call, will be XML response
   send(client_connection_fd, test.c_str(), test.size(), 0);
- 
+
   freeaddrinfo(host_info_list);
   close(socket_fd);
-  
+
   //Close database connection
   C->disconnect();
 

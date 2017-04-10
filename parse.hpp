@@ -17,8 +17,8 @@
 
 #include <xercesc/util/XMLString.hpp>
 #include <xercesc/parsers/XercesDOMParser.hpp>
-#include <xercesc/framework/LocalFileInputSource.hpp>
 #include <xercesc/framework/MemBufInputSource.hpp>
+#include <xercesc/framework/LocalFileInputSource.hpp>
 #include <xercesc/sax/ErrorHandler.hpp>
 #include <xercesc/sax/SAXParseException.hpp>
 #include <xercesc/validators/common/Grammar.hpp>
@@ -41,24 +41,24 @@ enum {
    ERROR_EMPTY_DOCUMENT
 };
 
-// class ParserErrorHandler: public xercesc::ErrorHandler
-// {
-// public:
-//   void warning(const xercesc::SAXParseException&);
-//   void error(const xercesc::SAXParseException&);
-//   void fatalError(const xercesc::SAXParseException&);
-//   void resetErrors();
+class ParserErrorHandler: public xercesc::ErrorHandler
+{
+public:
+  void warning(const xercesc::SAXParseException&);
+  void error(const xercesc::SAXParseException&);
+  void fatalError(const xercesc::SAXParseException&);
+  void resetErrors();
 
-// private:
-//   void reportParseException(const xercesc::SAXParseException&);
-// };
+private:
+  void reportParseException(const xercesc::SAXParseException&);
+};
 
 class Parse
 {
 public:
    Parse();
   ~Parse();
-   void readFile(std::string&, bool isString) throw(std::runtime_error);
+   void readFile(std::string&, bool) throw(std::runtime_error);
   //  void parseTextNode(xercesc::DOMNode *currentNode);
    void parseElemNode(xercesc::DOMNode *node);
    bool isElem(xercesc::DOMNode *node);
@@ -68,10 +68,9 @@ public:
    void parseTransferElemNode(xercesc::DOMNode *node);
    void parseCreateElemNode(xercesc::DOMNode *node);
    void parseBalanceElemNode(xercesc::DOMNode *node);
-   
-   std::vector<std::tuple<long long, double, std::string>> creates; // iterate over this
-   // vector of tuple(account * amount * ref)
-   std::tuple<long long, double, std::string> requestTuple;
+   bool reset;
+   std::vector<std::tuple<long long, std::string>> balances;
+   std::vector<std::tuple<long long, double, std::string>> creates;
    struct Transfer{
      std::string ref;
      long long from;
@@ -79,12 +78,7 @@ public:
      double amount;
      std::vector<std::string> tags;
    };
-   std::vector<Transfer> transfers; // iterate over this
-   Transfer currentTransfer;
-   bool reset;
-   std::vector<std::tuple<long long, std::string>> balances; //iterate over this
-   // vector of tuple(account * ref)
-   
+   std::vector<Transfer> transfers;
 private:
    xercesc::XercesDOMParser *m_FileParser;
   //  ParserErrorHandler parserErrorHandler;
@@ -97,6 +91,8 @@ private:
 
 
    XMLCh* TAG_create;
+   XMLCh* TAG_account;
+   XMLCh* TAG_balance;
 
    XMLCh* TAG_transfer;
    XMLCh* TAG_from;
@@ -105,32 +101,28 @@ private:
    XMLCh* TAG_tag;
 
 
-   XMLCh* TAG_balance;
+
    XMLCh* TAG_query;
-   XMLCh* TAG_account;
+   XMLCh* TAG_and;
+   XMLCh* TAG_or;
+   XMLCh* TAG_not;
+   XMLCh* TAG_equals;
+   XMLCh* TAG_less;
+   XMLCh* TAG_greater;
 
 
-//   bool reset;
+   std::tuple<long long, double, std::string> requestTuple;
 
-//   std::vector<std::tuple<long long, double, std::string>> creates;
-//   std::tuple<long long, double, std::string> requestTuple;
-//   struct Transfer{
-//      std::string ref;
-//      long long from;
-//      long long to;
-//      double amount;
-//      std::vector<std::string> tags;
-//   };
-//   std::vector<Transfer> transfers;
-//   Transfer currentTransfer;
-
+   Transfer currentTransfer;
    // vector of (ref * from * to * amout * [tags] )
+
    bool accSet;
    bool balSet;
 
    std::string balanceRef;
+
    std::string transferRef;
-//   std::vector<std::tuple<long long, std::string>> balances;
+
 
 
 };
