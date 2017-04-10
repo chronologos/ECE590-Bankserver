@@ -7,6 +7,44 @@
 //#include "exerciser.h"
 //#include "query_funcs.h"
 
+void parseAccount (connection *C) {
+  string line, attr;
+  int count = 0;
+  vector<string> v;
+  ifstream playerFile ("player.txt");
+  if (playerFile.is_open()) {
+    while (getline (playerFile, line)) {
+      if (line.empty()) {
+	continue;}
+      stringstream ss(line);
+      while (getline(ss, attr, ' ')) {
+	v.push_back(attr);
+      }
+      count++;
+    }
+  }
+  else {
+    cout << "Unable to open file." << endl;
+  }
+  int i = 0;
+  //int team_id = 0;
+  for(i; i < count; i++) {
+    int set = i * 11;
+    int team_id = stoi(v[set+1]);
+    int jersey_num = stoi(v[set+2]);
+    string first_name = v[set+3];
+    string last_name = v[set+4];
+    int mpg = stoi(v[set+5]);
+    int ppg = stoi(v[set+6]);
+    int rpg = stoi(v[set+7]);
+    int apg = stoi(v[set+8]);
+    double spg = stod(v[set+9]);
+    double bpg = stod(v[set+10]);
+    add_player(C, team_id, jersey_num, first_name, last_name, mpg, ppg, rpg, apg, spg, bpg);
+  }
+  playerFile.close();
+}
+
 using namespace std;
 using namespace pqxx;
 
