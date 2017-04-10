@@ -41,30 +41,13 @@ enum {
   ERROR_EMPTY_DOCUMENT
 };
 
-class ParserErrorHandler: public xercesc::ErrorHandler
-{
-public:
-  void warning(const xercesc::SAXParseException&);
-  void error(const xercesc::SAXParseException&);
-  void fatalError(const xercesc::SAXParseException&);
-  void resetErrors();
-
-private:
-  void reportParseException(const xercesc::SAXParseException&);
-};
-
 class Parse
 {
 public:
   Parse();
   ~Parse();
   void readFile(std::string&, bool) throw(std::runtime_error);
-  //  void parseTextNode(xercesc::DOMNode *currentNode);
 
-
-  bool reset;
-  std::vector<std::tuple<long long, std::string>> balances;
-  std::vector<std::tuple<long long, double, std::string>> creates;
   struct Transfer{
     std::string ref;
     long long from;
@@ -72,7 +55,29 @@ public:
     double amount;
     std::vector<std::string> tags;
   };
+
+
+  struct LeafQuery{
+    std::string query;
+    bool ready;
+  };
+
+  struct Query{
+    std::string ref;
+    std::vector<Query> andQueries;
+    std::vector<Query> orQueries;
+    std::vector<Query> notQueries;
+    LeafQuery leaf;
+    std::vector<std::string> tags;
+  };
+
+  bool reset;
+  std::vector<std::tuple<long long, std::string>> balances;
+  std::vector<std::tuple<long long, double, std::string>> creates;
   std::vector<Transfer> transfers;
+  std::vector<Query> queries;
+  std::string translateQuery(Query q);
+
 private:
   xercesc::XercesDOMParser *m_FileParser;
   void parseElemNode(xercesc::DOMNode *node);
@@ -82,7 +87,9 @@ private:
   void parseTransferElemNode(xercesc::DOMNode *node);
   void parseCreateElemNode(xercesc::DOMNode *node);
   void parseBalanceElemNode(xercesc::DOMNode *node);
-  void parseQueryElemNode(xercesc::DOMNode *node);
+  void parseQueryElemNode(xercesc::DOMNode *node, Query &query);
+  LeafQuery parseQueryRelop(xercesc::DOMNode *node, LeafQuery lq, std::string op);
+  std::string translateQueryInner(std::vector<Query> q, std::string res);
 
   //  ParserErrorHandler parserErrorHandler;
   // Internal class use only. Hold Xerces data in UTF-16 SMLCh type.
@@ -91,7 +98,6 @@ private:
   XMLCh* resetTrue;
   XMLCh* ATTR_ref;
   XMLCh* emptyRef;
-
 
   XMLCh* TAG_create;
   XMLCh* TAG_account;
@@ -102,8 +108,6 @@ private:
   XMLCh* TAG_to;
   XMLCh* TAG_amount;
   XMLCh* TAG_tag;
-
-
 
   XMLCh* TAG_query;
   XMLCh* TAG_and;
@@ -117,6 +121,7 @@ private:
   std::tuple<long long, double, std::string> requestTuple;
 
   Transfer currentTransfer;
+
   // vector of (ref * from * to * amout * [tags] )
 
   bool accSet;

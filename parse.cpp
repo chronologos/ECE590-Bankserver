@@ -21,34 +21,6 @@ using namespace std;
 */
 
 
-void ParserErrorHandler::reportParseException(const xercesc::SAXParseException& ex)
-{
-  char* msg = XMLString::transcode(ex.getMessage());
-  fprintf(stderr, "at line %llu column %llu, %s\n",
-  ex.getLineNumber(), ex.getColumnNumber(), msg);
-  XMLString::release(&msg);
-}
-
-void ParserErrorHandler::warning(const xercesc::SAXParseException& ex)
-{
-  reportParseException(ex);
-}
-
-void ParserErrorHandler::error(const xercesc::SAXParseException& ex)
-{
-  reportParseException(ex);
-}
-
-void ParserErrorHandler::fatalError(const xercesc::SAXParseException& ex)
-{
-  reportParseException(ex);
-}
-
-void ParserErrorHandler::resetErrors()
-{
-}
-
-
 Parse::Parse() {
   try {
     XMLPlatformUtils::Initialize(); // Initialize Xerces infrastructure
@@ -88,18 +60,18 @@ Parse::Parse() {
 
   creates = std::vector<std::tuple<long long, double, std::string>>();
   requestTuple = std::tuple<long long, double, std::string>();
+  // requestTuple holds the current create request as a
+  // (account no * balance) tuple.
   accSet = false;
   balSet = false;
   reset = false;
   balanceRef = "";
   balances = std::vector<std::tuple<long long, std::string>>();
-  struct Transfer currentTransfer;
+
+  struct Transfer currentTransfer = {};
+
   transfers = std::vector<Transfer>();
-  // vector of (ref * from * to * amout * [tags] )
-
-
-  // requestTuple holds the current create request as a
-  // (account no * balance) tuple.
+  queries = std::vector<Query>();
 }
 
 /**
@@ -260,10 +232,6 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
       }
     }
 
-    void parseQueryElemNode(xercesc::DOMNode *node){
-
-    }
-
 
     bool Parse::isElem(DOMNode *node){
       return (node->getNodeType() && node->getNodeType() == DOMNode::ELEMENT_NODE);
@@ -300,6 +268,7 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
       }
 
       else if (XMLString::equals(currentElement->getTagName(), TAG_transfer)) {
+        currentTransfer = {}; //empty struct
         const XMLCh* ref = currentElement->getAttribute(ATTR_ref);
         transferRef = XMLString::transcode(ref);
         currentTransfer.ref=transferRef;
@@ -308,10 +277,24 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
             parseTransferElemNode(children->item(i));
           }
           transfers.push_back(currentTransfer);
-          struct Transfer currentTransfer;
+          currentTransfer = {}; //empty struct
+        }
+      }
+
+      else if (XMLString::equals(currentElement->getTagName(), TAG_query)) {
+        cout << "parsing query" << endl;
+        Query query = {}; //empty struct
+        const XMLCh* ref = currentElement->getAttribute(ATTR_ref);
+        query.ref=XMLString::transcode(ref);
+        if (isElem(node)) {
+          parseQueryElemNode(node, query);
+          queries.push_back(query);
+          cout << "done with query" << endl;
+          cout << Parse::translateQuery(query) << endl;
         }
       }
     }
+
 
     void Parse::parseBalanceElemNode(DOMNode *node){
       if (isElem(node)){
@@ -384,7 +367,6 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
 
     void Parse::parseTransferElemNode(DOMNode *node){
       // Found node which is an Element. Re-cast node as element
-      cout << "im in " << endl;
       if (isElem(node)){
         DOMElement *currentElement = dynamic_cast<xercesc::DOMElement *>(node);
 
@@ -412,7 +394,6 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
         else if (XMLString::equals(currentElement->getTagName(), TAG_tag)) {
           const XMLCh* tag = parseLeafElem(node);
           char* tagStr = XMLString::transcode(tag);
-          cout << "tag: " << tagStr << endl;
           currentTransfer.tags.push_back(tagStr);
           XMLString::release(&tagStr);
         }
@@ -425,6 +406,92 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
       }
     }
 
+    // fn to construct query strings
+    Parse::LeafQuery Parse::parseQueryRelop(DOMNode *node, LeafQuery lq, std::string op){
+      DOMElement *currentElement = dynamic_cast<xercesc::DOMElement *>(node);
+      char *fromStr = XMLString::transcode(currentElement->getAttribute(TAG_from));
+      char *toStr = XMLString::transcode(currentElement->getAttribute(TAG_to));
+      char *amtStr = XMLString::transcode(currentElement->getAttribute(TAG_amount));
+      std::string fstr(fromStr);
+      std::string tstr(toStr);
+      std::string astr(amtStr);
+      // XMLString::release(&fromStr);
+      // XMLString::release(&toStr);
+      // XMLString::release(&amtStr);
+      std::string empty = "";
+      if (fstr != empty){
+        lq.query += "(origin " + op + " " + fstr + ")";
+        lq.ready = true;
+        return lq;
+      }
+      else if (tstr != empty){
+        lq.query += "(destination " + op + " " + tstr + ")";
+        lq.ready = true;
+        return lq;
+      }
+      else if (astr != empty){
+        lq.query += "(amount " + op + " " + amtStr + ")";
+        lq.ready = true;
+        return lq;
+      }
+    }
+
+    void Parse::parseQueryElemNode(DOMNode *node, Query &query) {
+      if (isElem(node)){
+        cout << "in parseQueryElemNode" << endl;
+
+        DOMElement *currentElement = dynamic_cast<xercesc::DOMElement *>(node);
+        DOMNodeList *children = node->getChildNodes();
+        const XMLSize_t count = children->getLength();
+        cout << "in parseQueryElemNode2" << endl;
+
+        for (XMLSize_t i = 0; i < count; ++i) {
+          cout << "in parseQueryElemNode3loop" << endl;
+          parseQueryElemNode(children->item(i), query);
+        }
+        // RELOPS
+        if (XMLString::equals(currentElement->getTagName(), TAG_greater)) {
+          LeafQuery lq = {};
+          lq = parseQueryRelop(node, lq, ">");
+          query.leaf = lq;
+          cout << "in parseQueryElemNode4a" << endl;
+        }
+        else if (XMLString::equals(currentElement->getTagName(), TAG_equals)) {
+          LeafQuery lq = {};
+          lq = parseQueryRelop(node, lq, "=");
+          query.leaf = lq;
+          cout << "in parseQueryElemNode4b" << endl;
+        }
+        else if (XMLString::equals(currentElement->getTagName(), TAG_less)) {
+          LeafQuery lq = {};
+          lq = parseQueryRelop(node, lq, "<");
+          query.leaf = lq;
+          cout << "in parseQueryElemNode4c" << endl;
+
+        }
+
+        if (XMLString::equals(currentElement->getTagName(), TAG_tag)) {
+          const XMLCh* tag = parseLeafElem(node);
+          char* tagStr = XMLString::transcode(tag);
+          query.tags.push_back(tagStr);
+          // XMLString::release(&tagStr);
+        }
+
+        // else {
+        //   if (XMLString::equals(currentElement->getTagName(), TAG_and)) {
+        //     currentQuery.query += " AND ("
+        //   }
+        //   else if (XMLString::equals(currentElement->getTagName(), TAG_or)) {
+        //     currentQuery.query += " OR ("
+        //   }
+        //   else if (XMLString::equals(currentElement->getTagName(), TAG_not)) {
+        //     currentQuery.query += " NOT ("
+        //   }
+        //
+        //   currentQuery.query += ")"
+        // }
+      }
+    }
 
     const XMLCh* Parse::parseLeafElem(DOMNode *node){
       DOMNodeList *children = node->getChildNodes();
@@ -437,8 +504,30 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
           return data;
         }
       }
+      return XMLString::transcode("NO NODE INFO IN XML");
       // DOMElement *elem = dynamic_cast<xercesc::DOMElement *>(node);
     }
+
+    std::string Parse::translateQuery(Parse::Query q){
+      std::string res = "SELECT * FROM transfers WHERE ";
+      if (q.leaf.ready) {
+        res += q.leaf.query;
+        res += " AND ";
+      }
+      res += translateQueryInner(q.andQueries, res);
+      res += translateQueryInner(q.orQueries, res);
+      res += translateQueryInner(q.notQueries, res);
+      return res;
+    }
+
+    std::string Parse::translateQueryInner(std::vector<Parse::Query> q, std::string res){
+      // auto andSize = q.andQueries.size();
+      // auto orSize = q.orQueries.size();
+      // auto notSize = q.notQueries.size();
+      return "";
+    }
+
+
 
     // #ifdef MAIN_TEST
     // /* This main is provided for unit test of the class. */
