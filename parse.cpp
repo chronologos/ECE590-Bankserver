@@ -54,6 +54,8 @@ Parse::Parse() {
   TAG_to = XMLString::transcode("to");
   TAG_amount = XMLString::transcode("amount");
   TAG_tag = XMLString::transcode("tag");
+  TAG_info = XMLString::transcode("info");
+
 
   m_FileParser = new XercesDOMParser;
   // ParserErrorHandler parserErrorHandler;
@@ -103,6 +105,8 @@ Parse::~Parse() {
     XMLString::release(&TAG_to);
     XMLString::release(&TAG_amount);
     XMLString::release(&TAG_tag);
+    XMLString::release(&TAG_info);
+
 
     XMLString::release(&TAG_query);
     XMLString::release(&TAG_and);
@@ -287,7 +291,9 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
         const XMLCh* ref = currentElement->getAttribute(ATTR_ref);
         query.ref=XMLString::transcode(ref);
         if (isElem(node)) {
-          parseQueryElemNode(node, query);
+          for (XMLSize_t i = 0; i < count; ++i) {
+            parseQueryElemNode(children->item(i), query);
+          }
           queries.push_back(query);
           cout << "done with query" << endl;
           cout << Parse::translateQuery(query) << endl;
@@ -445,10 +451,7 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
         const XMLSize_t count = children->getLength();
         cout << "in parseQueryElemNode2" << endl;
 
-        for (XMLSize_t i = 0; i < count; ++i) {
-          cout << "in parseQueryElemNode3loop" << endl;
-          parseQueryElemNode(children->item(i), query);
-        }
+
         // RELOPS
         if (XMLString::equals(currentElement->getTagName(), TAG_greater)) {
           LeafQuery lq = {};
@@ -470,26 +473,30 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
 
         }
 
-        if (XMLString::equals(currentElement->getTagName(), TAG_tag)) {
-          const XMLCh* tag = parseLeafElem(node);
-          char* tagStr = XMLString::transcode(tag);
-          query.tags.push_back(tagStr);
+        else if (XMLString::equals(currentElement->getTagName(), TAG_tag)) {
+          char *tag = XMLString::transcode(currentElement->getAttribute(TAG_info));
+          query.tags.push_back(tag);
           // XMLString::release(&tagStr);
         }
 
-        // else {
-        //   if (XMLString::equals(currentElement->getTagName(), TAG_and)) {
-        //     currentQuery.query += " AND ("
-        //   }
-        //   else if (XMLString::equals(currentElement->getTagName(), TAG_or)) {
-        //     currentQuery.query += " OR ("
-        //   }
-        //   else if (XMLString::equals(currentElement->getTagName(), TAG_not)) {
-        //     currentQuery.query += " NOT ("
-        //   }
-        //
-        //   currentQuery.query += ")"
-        // }
+        else if (XMLString::equals(currentElement->getTagName(), TAG_and)) {
+          Query newQuery = {}; //empty struct
+          query.andQueries.push_back(newQuery);
+          parseQueryElemNode(int *node, Parse::Query &query)
+        }
+        else if (XMLString::equals(currentElement->getTagName(), TAG_or)) {
+          currentQuery.query += " OR ("
+        }
+        else if (XMLString::equals(currentElement->getTagName(), TAG_not)) {
+          currentQuery.query += " NOT ("
+        }
+        for (XMLSize_t i = 0; i < count; ++i) {
+          cout << "in parseQueryElemNode3loop" << endl;
+          parseQueryElemNode(children->item(i), query);
+        }
+
+        currentQuery.query += ")"
+
       }
     }
 
@@ -510,10 +517,17 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
 
     std::string Parse::translateQuery(Parse::Query q){
       std::string res = "SELECT * FROM transfers WHERE ";
+      if (q.tags.size()>0){
+        for (auto i: q.tags){
+          res += "(tags = " + i + ") AND ";
+        }
+      }
+
       if (q.leaf.ready) {
         res += q.leaf.query;
         res += " AND ";
       }
+
       res += translateQueryInner(q.andQueries, res);
       res += translateQueryInner(q.orQueries, res);
       res += translateQueryInner(q.notQueries, res);

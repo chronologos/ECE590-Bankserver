@@ -44,8 +44,9 @@ void ReadXBytes(int socket, unsigned int x, void* buffer)
     {
       cout << "socket error" << endl;
     }
-
-    bytesRead += result;
+    else{
+      bytesRead += result;
+    }
   }
 }
 
@@ -138,18 +139,20 @@ int main(int argc, char *argv[])
   // }
 
   uint64_t length = 0;
-  char* buffer = 0;
+  // char* buffer = 0;
   // we assume that sizeof(length) will return 4 here.
   ReadXBytes(client_connection_fd, sizeof(length), (void*)(&length));
   length = be64toh(length);
   cout << length << endl;
-  buffer = new char[length];
+  char buffer[length] = {};
   ReadXBytes(client_connection_fd, length, (void*)buffer);
 
   // Then process the data as needed.
 
   string s(buffer);
-  delete [] buffer;
+  cout << buffer << endl;
+
+
   cout << s << endl;
   Parse parser;
   parser.readFile(s, true);

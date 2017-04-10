@@ -108,6 +108,8 @@ private:
   XMLCh* TAG_to;
   XMLCh* TAG_amount;
   XMLCh* TAG_tag;
+  XMLCh* TAG_info;
+
 
   XMLCh* TAG_query;
   XMLCh* TAG_and;
