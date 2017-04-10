@@ -7,7 +7,12 @@
 //#include "exerciser.h"
 //#include "query_funcs.h"
 
-void parseAccount (connection *C) {
+void addAccount (connection *C) {
+
+  
+
+
+
   string line, attr;
   int count = 0;
   vector<string> v;

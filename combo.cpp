@@ -172,6 +172,10 @@ int main(int argc, char *argv[])
     C = dbRun(0);
  }
 
+
+ //DB insertion calls
+ addAccounts(C);
+
 //Send response back to the client
   std::string test = "Got your message"; //Test call, will be XML response
   send(client_connection_fd, test.c_str(), test.size(), 0);
