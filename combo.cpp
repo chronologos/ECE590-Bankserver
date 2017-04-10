@@ -31,6 +31,24 @@
 using namespace std;
 using namespace xercesc;
 
+// This assumes buffer is at least x bytes long,
+// and that the socket is blocking.
+void ReadXBytes(int socket, unsigned int x, void* buffer)
+{
+  int bytesRead = 0;
+  int result;
+  while (bytesRead < x)
+  {
+    result = read(socket, buffer + bytesRead, x - bytesRead);
+    if (result < 1 )
+    {
+      cout << "socket error" << endl;
+    }
+
+    bytesRead += result;
+  }
+}
+
 int main(int argc, char *argv[])
 {
   int status;
@@ -91,39 +109,50 @@ int main(int argc, char *argv[])
   //after accept, pthread create
 
   //while loop counter, parse number in the beginning
-  char buffer[4096];
+  // char buffer[1024];
+  //
+  // uint64_t recSize = 1;
+  //
+  // int count = 0;
+  //
+  // std::string recData;
+  //
+  // //Keep recieving until buffer matches size of XML file
+  // while (count < recSize) {
+  //   int temp = recv(client_connection_fd, buffer, 1024, 0);
+  //
+  //   if (recSize == 1) {
+  //     count += (temp - 8);
+  //     recData = buffer+8;
+  //     recSize = *(uint64_t*)buffer;
+  //     recSize = be64toh(recSize);
+  //     cout << recSize << endl;
+  //   }
+  //
+  //   else {
+  //     count += temp;
+  //     recData += buffer;
+  //     cout << endl << "Still here" << endl;
+  //   }
+  //   //cout << endl << "recSize:" << recSize << endl;
+  // }
 
-  uint64_t recSize = 1;
+  uint64_t length = 0;
+  char* buffer = 0;
+  // we assume that sizeof(length) will return 4 here.
+  ReadXBytes(client_connection_fd, sizeof(length), (void*)(&length));
+  length = be64toh(length);
+  cout << length << endl;
+  buffer = new char[length];
+  ReadXBytes(client_connection_fd, length, (void*)buffer);
 
-  int count = 0;
+  // Then process the data as needed.
 
-  std::string recData;
-
-  //Keep recieving until buffer matches size of XML file
-  while (count < recSize) {
-    int temp = recv(client_connection_fd, buffer, 1024, 0);
-
-    if (recSize == 1) {
-      count += (temp - 8);
-      recData = buffer+8;
-      recSize = *(uint64_t*)buffer;
-      recSize = be64toh(recSize);
-      cout << recSize << endl;
-    }
-
-    else {
-      count += temp;
-      recData += buffer; // TODO, somhow this ends up mangled...
-      cout << endl << "Still here" << endl;
-    }
-    //cout << endl << "recSize:" << recSize << endl;
-  }
-  cout << recData << endl;
-  cout << buffer << endl;
-
+  string s(buffer);
+  delete [] buffer;
+  cout << s << endl;
   Parse parser;
-  string str(buffer);
-  parser.readFile(str, true);
+  parser.readFile(s, true);
 
 //Parsing calls here
 
