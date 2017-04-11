@@ -35,7 +35,9 @@ vector<string> getArray(string pString) {
 }
 
 std::vector<addResult> addAccount (connection *C, std::vector<Parse::Create> *parsedAccounts) {
+
   std::vector<addResult> res;
+
   for (auto it = parsedAccounts->begin(); it != parsedAccounts->end(); ++it) {
     //cout << "HEY" << endl;
     //cout << std::get<0>(*it) << endl;;
@@ -47,8 +49,11 @@ std::vector<addResult> addAccount (connection *C, std::vector<Parse::Create> *pa
     if (error){
       result.success = false;
     }
+    //for sql operation
     string account = to_string((*it).account);
     string balance = to_string((*it).balance);
+
+    //for result struct
     string ref = to_string((*it).ref);
     result.ref = ref;
 
@@ -69,12 +74,14 @@ std::vector<addResult> addAccount (connection *C, std::vector<Parse::Create> *pa
 }
 
 std::vector<balanceResult> balanceCheck (connection *C, vector<std::tuple<long long, string>> *parsedBalance) {
+  
   std::vector<balanceResult> res;
+
   for (auto it = parsedBalance->begin(); it != parsedBalance->end(); ++it) {
     //cout << "HEY" << endl;
     //cout << std::get<0>(*it) << endl;
-    balanceResult balanceresult = {};
-    balanceresult.success = true;
+    balanceResult balanceResult = {};
+    balanceResult.success = true;
 
     string sql;
     string accountNum = to_string(std::get<0>(*it));
@@ -88,12 +95,14 @@ std::vector<balanceResult> balanceCheck (connection *C, vector<std::tuple<long l
     result R( N.exec( sql ));
 
     /* List down all the records */
-    cout << "Balance" << endl;
+    //cout << "Balance" << endl;
     for (result::const_iterator c = R.begin(); c != R.end(); ++c) {
-      cout <<c[0].as<string>()<< endl << endl;
+      //cout <<c[0].as<string>()<< endl << endl;
+      balanceResult.balance = c[0].as<double>();
+      //cout << "balanceResult:" << balanceResult.balance << endl;
     }
     //cout << "Operation done successfully" << endl;
-    res.push_back(balanceresult);
+    res.push_back(balanceResult);
   }
   return res;
 }
@@ -247,7 +256,7 @@ connection * dbRun (int reset) {
     tD.commit();
 
     cout << "Table successfully dropped." << endl;
-  }
+  
 
   // Create Tables
   aString = "CREATE TABLE ACCOUNTS("		      \
@@ -270,7 +279,7 @@ connection * dbRun (int reset) {
   tW.commit();
 
   cout << "Table created successfully" << endl;
-
+  }
 
   //Parse .txt files and insert
   //parseAccount(C);
