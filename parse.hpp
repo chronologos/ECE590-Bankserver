@@ -79,11 +79,12 @@ public:
   };
 
   bool reset;
-  std::vector<std::shared_ptr<Create>> creates;
+  std::vector<Create> creates;
   std::vector<std::tuple<long long, std::string>> balances;
   std::vector<Transfer> transfers;
   std::vector<std::shared_ptr<Query>> queries;
-  std::string translateQuery(std::shared_ptr<Query> q);
+  static std::string translateQuery(std::shared_ptr<Query> q);
+  static std::string translateQueryInner(std::vector<std::shared_ptr<Query>> qq, std::string res, std::string op);
 
 private:
   xercesc::XercesDOMParser *m_FileParser;
@@ -92,11 +93,10 @@ private:
   bool isText(xercesc::DOMNode *node);
   const XMLCh* parseLeafElem(xercesc::DOMNode *node);
   void parseTransferElemNode(xercesc::DOMNode *node);
-  void parseCreateElemNode(xercesc::DOMNode *node, std::shared_ptr<Create> createPtr);
+  void parseCreateElemNode(xercesc::DOMNode *node, Create &create);
   void parseBalanceElemNode(xercesc::DOMNode *node);
   void parseQueryElemNode(xercesc::DOMNode *node, std::shared_ptr<Query> queryPtr);
   void parseQueryRelop(xercesc::DOMNode *node, std::shared_ptr<Query> q, std::string op);
-  std::string translateQueryInner(std::vector<std::shared_ptr<Query>> qq, std::string res, std::string op);
 
   //  ParserErrorHandler parserErrorHandler;
   // Internal class use only. Hold Xerces data in UTF-16 SMLCh type.

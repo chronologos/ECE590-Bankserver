@@ -26,9 +26,23 @@ struct balanceResult{
   std::string errorMessage;
 };
 
-std::vector<addResult> addAccount (connection *C, std::vector<std::shared_ptr<Parse::Create>> * parsedAccounts);
+struct queryResult{
+  long long from;
+  long long to;
+  double amount;
+  std::vector<std::string> tags;
+};
+
+struct queryResults{
+  std::string ref;
+  std::vector<std::shared_ptr<queryResult>> results;
+};
+
+
+std::vector<addResult> addAccount (connection *C, std::vector<Parse::Create> *parsedAccounts);
 std::vector<balanceResult> balanceCheck (connection *C, std::vector<std::tuple<long long, std::string>> *parsedBalance);
 std::vector<transferResult> makeTransfers (connection *C, std::vector<Parse::Transfer> *parsedTransfer);
+std::vector<queryResult> makeQueries (connection *C, std::vector<std::shared_ptr<Parse::Query>> *parsedTransfer);
 
 
 

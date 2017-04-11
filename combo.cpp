@@ -145,7 +145,7 @@ int main(int argc, char *argv[])
   ReadXBytes(client_connection_fd, sizeof(length), (void*)(&length));
   length = be64toh(length);
   cout << length << endl;
-  char buffer[length+1] = {};
+  char *buffer = new char[length+1];
   memset(buffer, '\0', sizeof(char)*(length+1));
   cout << buffer << endl;
   ReadXBytes(client_connection_fd, length, (void*)buffer);
@@ -159,7 +159,7 @@ int main(int argc, char *argv[])
   //jcout << s << endl;
   Parse parser;
   parser.readFile(s, true);
-
+  delete[] buffer;
 //Parsing calls here
 
 
@@ -178,9 +178,11 @@ int main(int argc, char *argv[])
 
  //DB insertion calls
 
- addAccount(C, &parser.creates);
- balanceCheck(C, &parser.balances);
- makeTransfers(C, &parser.transfers);
+ auto createResults = addAccount(C, &parser.creates);
+ auto balanceResults = balanceCheck(C, &parser.balances);
+ auto transferResults = makeTransfers(C, &parser.transfers);
+ auto queryResults = makeQueries(C, &parser.queries);
+
 
 //Send response back to the client
   std::string test = "Got your message"; //Test call, will be XML response

@@ -60,7 +60,7 @@ Parse::Parse() {
   m_FileParser = new XercesDOMParser;
   // ParserErrorHandler parserErrorHandler;
 
-  creates = std::vector<std::shared_ptr<Create>>();
+  creates = std::vector<Create>();
   requestTuple = std::tuple<long long, double, std::string>();
   // requestTuple holds the current create request as a
   // (account no * balance) tuple.
@@ -212,7 +212,7 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
         // DEBUG PRINTS
         cout << "Done! Printing final creates vector:" << endl;
         for (auto i : creates){
-          cout << "account: " << i->account << ", balance: " << i->balance << endl;
+          cout << "account: " << i.account << ", balance: " << i.balance << ", ref: " << i.ref << endl;
         }
         cout << "Printing final balances vector:" << endl;
         for (auto i : balances){
@@ -250,23 +250,24 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
       const XMLSize_t count = children->getLength();
 
       if (XMLString::equals(currentElement->getTagName(), TAG_create)) {
-        std::shared_ptr<Create> createPtr(new Create()); //empty struct
-        createPtr->error = false;
-        createPtr->accountSet = false;
-        createPtr->balance = 0;
+        Create create = {};
+        create.error = false;
+        create.accountSet = false;
+        create.balance = 0;
+        create.account = 0;
         const XMLCh* ref = currentElement->getAttribute(ATTR_ref);
         if (!XMLString::equals(ref, emptyRef)){
           char * refStr = XMLString::transcode(ref);
           std::string s(refStr);
-          createPtr->ref = s;
+          create.ref = s;
         }
         for (XMLSize_t i = 0; i < count; ++i) {
-          parseCreateElemNode(children->item(i), createPtr);
+          parseCreateElemNode(children->item(i), create);
         }
-        if (!createPtr->accountSet){
-          createPtr->error = true;
+        if (!create.accountSet){
+          create.error = true;
         }
-        creates.push_back(createPtr);
+        creates.push_back(create);
       }
 
       else if (XMLString::equals(currentElement->getTagName(), TAG_balance)){
@@ -315,22 +316,31 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
       }
     }
 
-    void Parse::parseCreateElemNode(DOMNode *node, std::shared_ptr<Create> createPtr){
+    void Parse::parseCreateElemNode(DOMNode *node, Parse::Create &create){
+      cout << "in parseCreateElemNode!" <<endl;
+      printf("%p", node);
       if (isElem(node)){
+        cout << "in parseCreateElemNode before cast!" <<endl;
+
         DOMElement *currentElement = dynamic_cast<xercesc::DOMElement *>(node);
+        cout << "in parseCreateElemNode CE!" <<endl;
+
         if (XMLString::equals(currentElement->getTagName(),TAG_account)) {
           cout << "TAG_account found" << endl;
           const XMLCh* accountNumber = parseLeafElem(node);
           char* accountNumberStr = XMLString::transcode(accountNumber);
-          createPtr->account = std::stoll(accountNumberStr);
-          createPtr->accountSet = true;
+          create.account = std::stoll(accountNumberStr);
+          create.accountSet = true;
           XMLString::release(&accountNumberStr);
         }
         else if (XMLString::equals(currentElement->getTagName(),TAG_balance)){
+          cout << "TAG_balance found" << endl;
           const XMLCh* balance = parseLeafElem(node);
           char* balanceStr = XMLString::transcode(balance);
-          createPtr->account = std::stod(balanceStr);
+          create.balance = std::stod(balanceStr);
           XMLString::release(&balanceStr);
+        } else{
+          cout << "invalid tag" << endl;
         }
       }
     }
@@ -525,6 +535,7 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
     }
 
     const XMLCh* Parse::parseLeafElem(DOMNode *node){
+      cout << "in parseLeafElem!" <<endl;
       DOMNodeList *children = node->getChildNodes();
       const XMLSize_t count = children->getLength();
       for (XMLSize_t i = 0; i < count; ++i) {
@@ -584,58 +595,69 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
     }
 
     std::string Parse::translateQueryInner(std::vector<shared_ptr<Parse::Query>> queries, std::string res, std::string op){
-      cout << "translateQueryInner called with " << op << endl;
+      // cout << "translateQueryInner called with " << op << endl;
       auto size = queries.size();
       if (size == 0) {
         return "";
       }
       res += "(";
-      for (auto i = 0; i<queries.size(); i++){
-        auto andSize = queries[i]->andQueries.size();
-        auto orSize = queries[i]->orQueries.size();
-        auto notSize = queries[i]->notQueries.size();
+      for (uint32_t i = 0; i<queries.size(); i++){
+        uint32_t andSize = queries[i]->andQueries.size();
+        uint32_t orSize = queries[i]->orQueries.size();
+        uint32_t notSize = queries[i]->notQueries.size();
         if (!queries[i]->ready){
 
           // recurse!
-          cout << "recurse" << endl;
-          res += translateQueryInner(queries[i]->andQueries, "", "AND");
-          if (orSize != 0){
+          // cout << "recurse" << endl;
+          if (andSize != 0) {
+            res += translateQueryInner(queries[i]->andQueries, "", "AND");
+          }
+          if (orSize != 0 && andSize != 0){
             res += "OR";
             res += translateQueryInner(queries[1]->orQueries, "", "OR");
           }
-          if (notSize != 0){
+          else if (orSize != 0){
+            res += translateQueryInner(queries[1]->orQueries, "", "OR");
+          }
+          if (notSize != 0 && (orSize != 0 || andSize != 0)){
             res += "AND (NOT";
             res += translateQueryInner(queries[1]->notQueries, "", "NOT");
             res += ")";
           }
+          else if (notSize != 0){
+            res += "NOT";
+            res += translateQueryInner(queries[1]->notQueries, "", "NOT");
+            res += "";
+          }
         }
 
         if (queries[i]->tags.size()>0) {
-          cout << "tags" << endl;
+          // cout << "tags" << endl;
           auto tsize = queries[i]->tags.size();
           if (tsize >0){
-            for (auto j = 0; j < tsize; j++){
+            for (uint32_t j = 0; j < tsize; j++){
               if (j==0){
-                res += "(" + queries[i]->tags[j];
+                res += "( tag @> ARRAY['" + queries[i]->tags[j]+ "']";
               }
               else {
-                res += (" " + op + " " +queries[i]->tags[j]);
+                res += " " + op + " tag @> ARRAY['" + queries[i]->tags[j]+ "']";
               }
             }
             res += ")";
           }
         }
         else {
-          cout << "base case" << endl;
+          // cout << "base case" << endl;
           // base case
-          cout << "?" << endl;
+          // cout << "?" << endl;
           res += queries[i]->query;
         }
         if (i != queries.size()-1){
           res += op + " ";
         }
       }
-      cout << res << endl;
+      // cout << res << endl;
+      res += ")";
       return res;
     }
 
