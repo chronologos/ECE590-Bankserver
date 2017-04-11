@@ -56,7 +56,7 @@ void WriteBytes(int socket, string str) {
   char *buffer = new char[bytesToWrite + 8];
   *(uint64_t*)buffer = htobe64(bytesToWrite);
   strcpy(buffer+8, str.c_str());
-
+  bytesToWrite += 8;
   uint64_t bytesWritten = 0;
   uint64_t result;
 
