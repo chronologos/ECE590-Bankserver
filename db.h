@@ -1,5 +1,6 @@
 #include <iostream>
 #include <pqxx/pqxx>
+#include "parse.hpp"
 
 using namespace pqxx;
 
@@ -8,6 +9,8 @@ using namespace pqxx;
 
 void addAccount (connection *C, std::vector<std::tuple<long long, double, std::string>> * parsedAccounts);
 void balanceCheck (connection *C, std::vector<std::tuple<long long, std::string>> *parsedBalance);
+
+void makeTransfers (connection *C, std::vector<Parse::Transfer> *parsedTransfer);
 
 connection * dbRun (int reset);
 

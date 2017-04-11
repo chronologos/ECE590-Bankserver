@@ -14,7 +14,6 @@ using namespace pqxx;
 
 
 void addAccount (connection *C, std::vector<std::tuple<long long, double, std::string>> *parsedAccounts) {
-
   for (auto it = parsedAccounts->begin(); it != parsedAccounts->end(); ++it) {
     //cout << "HEY" << endl;
     //cout << std::get<0>(*it) << endl;;
@@ -36,7 +35,6 @@ void addAccount (connection *C, std::vector<std::tuple<long long, double, std::s
 }
 
 void balanceCheck (connection *C, vector<std::tuple<long long, string>> *parsedBalance) {
-
   for (auto it = parsedBalance->begin(); it != parsedBalance->end(); ++it) {
     //cout << "HEY" << endl;
     //cout << std::get<0>(*it) << endl;
@@ -53,12 +51,67 @@ void balanceCheck (connection *C, vector<std::tuple<long long, string>> *parsedB
     result R( N.exec( sql ));
 
     /* List down all the records */
-    cout << "Balance" << endl;
+    //cout << "Balance" << endl;
     for (result::const_iterator c = R.begin(); c != R.end(); ++c) {
-      cout <<c[0].as<string>()<< endl << endl;
+      //cout <<c[0].as<string>()<< endl << endl;
     }
     //cout << "Operation done successfully" << endl;
   }
+}
+
+void makeTransfers (connection *C, std::vector<Parse::Transfer> *parsedTransfer) {
+  size_t vecSize = parsedTransfer->size();
+  cout << "Transfer size:" << vecSize << endl;
+
+  for (auto it = parsedTransfer->begin(); it != parsedTransfer->end(); ++it) {
+    
+    string sql;
+    string amount = to_string((*it).amount);
+    string origin = to_string((*it).from);
+    string destination = to_string((*it).to);
+
+    int numTags = (*it).tags.size();
+
+    if (numTags == 0) {
+      sql = "INSERT INTO TRANSFERS (AMOUNT,ORIGIN,DESTINATION)"			\
+      "VALUES (" + amount + "," + origin + "," + destination + ");";
+      work W(*C);   
+      W.exec( sql );
+      W.commit();
+    }
+    else {
+      string tag = (*it).tags[0];
+      sql = "INSERT INTO TRANSFERS (AMOUNT,ORIGIN,DESTINATION,TAG)"	\
+	"VALUES (" + amount + "," + origin + "," + destination + ",'{" + tag + "}');";
+      
+      work W(*C);   
+      W.exec( sql );
+      W.commit();
+
+      string add;
+      for(int i = 1; i < numTags; i++) {
+	string otherTags = (*it).tags[i];
+	cout << otherTags << endl;
+	//add = "UPDATE transfers SET tag = array_cat(tag, '{" +otherTags + "}');";
+	add = "UPDATE transfers SET tag = tag || '{" + otherTags + "}';";
+	work A(*C);   
+	A.exec( add );
+	A.commit();
+      }
+    }
+    
+    string transFrom = "UPDATE accounts SET balance=balance - " + amount +
+      " WHERE account_num = " + origin + ";"; 
+    work F(*C);   
+    F.exec( transFrom );
+    F.commit();
+
+    string transTo = "UPDATE accounts SET balance=balance + " + amount +
+      " WHERE account_num = " + destination + ";"; 
+    work T(*C);   
+    T.exec( transTo );
+    T.commit();
+  }   
 }
 
 
@@ -116,7 +169,7 @@ connection * dbRun (int reset) {
     "AMOUNT                     FLOAT    NOT NULL,"
     "ORIGIN                     BIGINT   NOT NULL,"
     "DESTINATION                BIGINT   NOT NULL,"
-    "TAG                        TEXT     NOT NULL);";
+    "TAG                        TEXT[]   NOT NULL);";
   //Create transactional objects
   work aW(*C);
   aW.exec( aString );

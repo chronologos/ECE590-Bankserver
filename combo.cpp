@@ -177,6 +177,7 @@ int main(int argc, char *argv[])
 
  addAccount(C, &parser.creates);
  balanceCheck(C, &parser.balances);
+ makeTransfers(C, &parser.transfers);
 
 //Send response back to the client
   std::string test = "Got your message"; //Test call, will be XML response
