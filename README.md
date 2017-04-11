@@ -7,3 +7,6 @@
 1. load-test sends `primer.xml` to create accounts.
 2. after sufficient time, load-test spins up multiple threads and starts sending transactions on accounts
 3. after sufficient time, load-test sends `checkres.xml` and checks the result against the local result in `checkres.xml`.
+
+# Setup
+1. Install postgres, create database `banks` with user `postgres` password `passw0rd`.

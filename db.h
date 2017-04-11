@@ -38,11 +38,10 @@ struct queryResults{
   std::vector<std::shared_ptr<queryResult>> results;
 };
 
-
 std::vector<addResult> addAccount (connection *C, std::vector<Parse::Create> *parsedAccounts);
 std::vector<balanceResult> balanceCheck (connection *C, std::vector<std::tuple<long long, std::string>> *parsedBalance);
 std::vector<transferResult> makeTransfers (connection *C, std::vector<Parse::Transfer> *parsedTransfer);
-std::vector<queryResult> makeQueries (connection *C, std::vector<std::shared_ptr<Parse::Query>> *parsedTransfer);
+std::vector<std::shared_ptr<queryResults>> makeQueries (connection *C, std::vector<std::shared_ptr<Parse::Query>> *parsedTransfer);
 
 
 

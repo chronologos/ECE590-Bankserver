@@ -12,6 +12,27 @@
 using namespace std;
 using namespace pqxx;
 
+// function to get string array from string representation
+vector<string> getArray(string pString) {
+  vector<string> tags;
+  pString += ',';
+  size_t begin = pString.find('{') + 1;
+  size_t end = pString.find('}');
+  size_t actualPosition;
+  string tag;
+
+  while(true) {
+    actualPosition = pString.find(',', begin);
+    if(actualPosition > end) {
+      tag = pString.substr(begin, end - begin);
+      tags.push_back(tag);
+      return tags;
+    }
+    tag = pString.substr(end, actualPosition - begin);
+    tags.push_back(tag);
+    begin = actualPosition + 1;
+  }
+}
 
 std::vector<addResult> addAccount (connection *C, std::vector<Parse::Create> *parsedAccounts) {
   std::vector<addResult> res;
@@ -67,9 +88,9 @@ std::vector<balanceResult> balanceCheck (connection *C, vector<std::tuple<long l
     result R( N.exec( sql ));
 
     /* List down all the records */
-    //cout << "Balance" << endl;
+    cout << "Balance" << endl;
     for (result::const_iterator c = R.begin(); c != R.end(); ++c) {
-      //cout <<c[0].as<string>()<< endl << endl;
+      cout <<c[0].as<string>()<< endl << endl;
     }
     //cout << "Operation done successfully" << endl;
     res.push_back(balanceresult);
@@ -77,7 +98,7 @@ std::vector<balanceResult> balanceCheck (connection *C, vector<std::tuple<long l
   return res;
 }
 
-std::vector<transferResult> makeTransfers (connection *C, std::vector<Parse::Transfer> *parsedTransfer) {
+vector<transferResult> makeTransfers (connection *C, std::vector<Parse::Transfer> *parsedTransfer) {
   size_t vecSize = parsedTransfer->size();
   cout << "Transfer size:" << vecSize << endl;
   std::vector<transferResult> res;
@@ -135,22 +156,51 @@ std::vector<transferResult> makeTransfers (connection *C, std::vector<Parse::Tra
   return res;
 }
 
-std::vector<queryResult> makeQueries (connection *C, std::vector<std::shared_ptr<Parse::Query>> *parsedQueries){
-  std::vector<queryResult> res;
+vector<shared_ptr<queryResults>> makeQueries (connection *C, std::vector<std::shared_ptr<Parse::Query>> *parsedQueries){
+  vector<shared_ptr<queryResults>> res; //empty vector for results of ALL queries
   cout << "processing queries" << endl;
   for (auto it = parsedQueries->begin(); it != parsedQueries->end(); ++it) {
+    std::shared_ptr<queryResults> qResultsPtr(new queryResults()); //empty struct for results of ONE query
+    qResultsPtr->ref = (*it)->ref;
     auto query = (*it);
     std::string sql = Parse::translateQuery(query);
 
     cout << sql << endl;
     /* Create a non-transactional object. */
     nontransaction N(*C);
-
     /* Execute SQL query */
     result R( N.exec(sql));
     for (result::const_iterator c = R.begin(); c != R.end(); ++c) {
-      cout <<c[0].as<string>()<< endl << endl;
+      std::shared_ptr<queryResult> qResultPtr(new queryResult()); //empty struct for one result of ONE query
+
+      int dcount = 0;
+      for (auto d : c){
+        // cout <<d.as<string>()<< endl;
+        if (dcount == 1){
+          pqxx::from_string<double>(d, (qResultPtr->amount));
+          cout << qResultPtr->amount << endl;
+        }
+        else if (dcount == 2){
+          pqxx::from_string<long long>(d, (qResultPtr->from));
+          cout << qResultPtr->from << endl;
+
+        }
+        else if (dcount == 3){
+          pqxx::from_string<long long>(d, (qResultPtr->to));
+          cout << qResultPtr->to << endl;
+
+        }
+        else if (dcount == 4){
+          // cout << (queryResultPtr->tags) << endl;
+          qResultPtr->tags = getArray(d.as<string>());
+          // d.find("is");
+          // (queryResultPtr->tags).push_back(tag);
+        }
+        dcount++;
+      }
+      qResultsPtr->results.push_back(qResultPtr);
     }
+    res.push_back(qResultsPtr);
   }
   return res;
 }

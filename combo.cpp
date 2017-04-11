@@ -51,6 +51,27 @@ void ReadXBytes(int socket, uint64_t x, void* buffer)
   cout << bytesRead << endl;
 }
 
+void WriteBytes(int socket, string str) {
+  uint64_t bytesToWrite = str.size();
+  char *buffer = new char[bytesToWrite + 8];
+  *(uint64_t*)buffer = htobe64(bytesToWrite);
+  strcpy(buffer+8, str.c_str());
+
+  uint64_t bytesWritten = 0;
+  uint64_t result;
+
+  while (bytesToWrite > bytesWritten){
+    result = send(socket, buffer + bytesWritten, bytesToWrite- bytesWritten, 0);
+    if (result < 1 )
+    {
+      cout << "socket error" << endl;
+    }
+    else{
+      bytesWritten += result;
+    }
+  }
+}
+
 int main(int argc, char *argv[])
 {
   int status;
@@ -110,35 +131,6 @@ int main(int argc, char *argv[])
 
   //after accept, pthread create
 
-  //while loop counter, parse number in the beginning
-  // char buffer[1024];
-  //
-  // uint64_t recSize = 1;
-  //
-  // int count = 0;
-  //
-  // std::string recData;
-  //
-  // //Keep recieving until buffer matches size of XML file
-  // while (count < recSize) {
-  //   int temp = recv(client_connection_fd, buffer, 1024, 0);
-  //
-  //   if (recSize == 1) {
-  //     count += (temp - 8);
-  //     recData = buffer+8;
-  //     recSize = *(uint64_t*)buffer;
-  //     recSize = be64toh(recSize);
-  //     cout << recSize << endl;
-  //   }
-  //
-  //   else {
-  //     count += temp;
-  //     recData += buffer;
-  //     cout << endl << "Still here" << endl;
-  //   }
-  //   //cout << endl << "recSize:" << recSize << endl;
-  // }
-
   uint64_t length = 0;
   // char* buffer = 0;
   // we assume that sizeof(length) will return 4 here.
@@ -150,43 +142,56 @@ int main(int argc, char *argv[])
   cout << buffer << endl;
   ReadXBytes(client_connection_fd, length, (void*)buffer);
 
-  // Then process the data as needed.
-
   string s(buffer);
   cout << buffer << endl;
-
-
-  //jcout << s << endl;
   Parse parser;
   parser.readFile(s, true);
   delete[] buffer;
-//Parsing calls here
-
 
  //DB Set-up, if reset == True, drop all tables
-
- connection *C;
-
- if (parser.reset == true){
+  connection *C;
+  if (parser.reset == true){
     C = dbRun(1);
- }
-
- else {
+  }
+  else {
     C = dbRun(0);
- }
+  }
+  //DB insertion calls
 
+  auto createResults = addAccount(C, &parser.creates);
+  auto balanceResults = balanceCheck(C, &parser.balances);
+  auto transferResults = makeTransfers(C, &parser.transfers);
+  auto queriesResults = makeQueries(C, &parser.queries);
 
- //DB insertion calls
+  // start constructing reply
+  string reply = "";
+  reply += "<?xml version='1.0' encoding='UTF-8'?>\r\n<results>\r\n";
+  for (auto &queryResults : queriesResults){
+    if (queryResults->ref != "") {
+      reply += "  <results ref=\"" + queryResults->ref + "\">\r\n";
+    } else {
+      reply += "  <results>\r\n";
+    }
 
- auto createResults = addAccount(C, &parser.creates);
- auto balanceResults = balanceCheck(C, &parser.balances);
- auto transferResults = makeTransfers(C, &parser.transfers);
- auto queryResults = makeQueries(C, &parser.queries);
-
+    for (auto &queryResult : queryResults->results){
+      reply += "    <transfer>\r\n";
+      reply += "      <from>" + std::to_string(queryResult->from) +"</from>\r\n";
+      reply += "      <to>" + std::to_string(queryResult->to) +"</to>\r\n";
+      reply += "      <amount>" + std::to_string(queryResult->amount) +"</amount>\r\n";
+      // TODO
+      reply += "    </transfer>\r\n";
+    }
+    reply += "  </results>\r\n";
+  }
+  reply += "</results>";
+  cout << "OUR REPLY:" << endl;
+  cout << reply << endl;
+  cout << reply.size() << endl;
+  WriteBytes(client_connection_fd, reply);
 
 //Send response back to the client
   std::string test = "Got your message"; //Test call, will be XML response
-  send(client_connection_fd, test.c_str(), test.size(), 0);
+  // send(client_connection_fd, test.c_str(), test.size(), 0);
 
   freeaddrinfo(host_info_list);
   close(socket_fd);
