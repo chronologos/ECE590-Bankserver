@@ -7,12 +7,32 @@ using namespace pqxx;
 #ifndef _DBRUN_
 #define _DBRUN_
 
-void addAccount (connection *C, std::vector<std::tuple<long long, double, std::string>> * parsedAccounts);
-void balanceCheck (connection *C, std::vector<std::tuple<long long, std::string>> *parsedBalance);
+struct addResult{
+  bool success;
+  std::string ref;
+  std::string errorMessage;
+};
 
-void makeTransfers (connection *C, std::vector<Parse::Transfer> *parsedTransfer);
+struct transferResult{
+  bool success;
+  std::string ref;
+  std::string errorMessage;
+};
+
+struct balanceResult{
+  bool success;
+  double balance;
+  std::string ref;
+  std::string errorMessage;
+};
+
+std::vector<addResult> addAccount (connection *C, std::vector<std::shared_ptr<Parse::Create>> * parsedAccounts);
+std::vector<balanceResult> balanceCheck (connection *C, std::vector<std::tuple<long long, std::string>> *parsedBalance);
+std::vector<transferResult> makeTransfers (connection *C, std::vector<Parse::Transfer> *parsedTransfer);
+
+
 
 connection * dbRun (int reset);
 
 
-#endif //_DBRUN_       
+#endif //_DBRUN_

@@ -13,35 +13,40 @@ using namespace std;
 using namespace pqxx;
 
 
-void addAccount (connection *C, std::vector<std::tuple<long long, double, std::string>> *parsedAccounts) {
+std::vector<addResult> addAccount (connection *C, std::vector<std::shared_ptr<Parse::Create>> *parsedAccounts) {
   for (auto it = parsedAccounts->begin(); it != parsedAccounts->end(); ++it) {
     //cout << "HEY" << endl;
     //cout << std::get<0>(*it) << endl;;
 
     string sql;
-    string accountNum = to_string(std::get<0>(*it));
-    string balance = to_string(std::get<1>(*it));
-    
+    bool error = ((*it)->error);
+    if (error){
+      // TODO
+    }
+    string account = to_string((*it)->account);
+    string balance = to_string((*it)->balance);
+    string ref = to_string((*it)->ref);
+
     sql = "INSERT INTO ACCOUNTS (ACCOUNT_NUM,BALANCE)"			\
-      "VALUES (" + accountNum + "," + balance + ");";
-    
+      "VALUES (" + account + "," + balance + ");";
+
     /* Create a transactional object. */
     work W(*C);
-    
+
     /* Execute SQL query */
     W.exec( sql );
     W.commit();
   }
 }
 
-void balanceCheck (connection *C, vector<std::tuple<long long, string>> *parsedBalance) {
+std::vector<balanceResult> balanceCheck (connection *C, vector<std::tuple<long long, string>> *parsedBalance) {
   for (auto it = parsedBalance->begin(); it != parsedBalance->end(); ++it) {
     //cout << "HEY" << endl;
     //cout << std::get<0>(*it) << endl;
 
     string sql;
     string accountNum = to_string(std::get<0>(*it));
-    
+
     sql = "SELECT balance FROM accounts WHERE account_num = " +  accountNum;
 
     /* Create a non-transactional object. */
@@ -59,12 +64,12 @@ void balanceCheck (connection *C, vector<std::tuple<long long, string>> *parsedB
   }
 }
 
-void makeTransfers (connection *C, std::vector<Parse::Transfer> *parsedTransfer) {
+std::vector<transferResult> makeTransfers (connection *C, std::vector<Parse::Transfer> *parsedTransfer) {
   size_t vecSize = parsedTransfer->size();
   cout << "Transfer size:" << vecSize << endl;
 
   for (auto it = parsedTransfer->begin(); it != parsedTransfer->end(); ++it) {
-    
+
     string sql;
     string amount = to_string((*it).amount);
     string origin = to_string((*it).from);
@@ -75,7 +80,7 @@ void makeTransfers (connection *C, std::vector<Parse::Transfer> *parsedTransfer)
     if (numTags == 0) {
       sql = "INSERT INTO TRANSFERS (AMOUNT,ORIGIN,DESTINATION)"			\
       "VALUES (" + amount + "," + origin + "," + destination + ");";
-      work W(*C);   
+      work W(*C);
       W.exec( sql );
       W.commit();
     }
@@ -83,8 +88,8 @@ void makeTransfers (connection *C, std::vector<Parse::Transfer> *parsedTransfer)
       string tag = (*it).tags[0];
       sql = "INSERT INTO TRANSFERS (AMOUNT,ORIGIN,DESTINATION,TAG)"	\
 	"VALUES (" + amount + "," + origin + "," + destination + ",'{" + tag + "}');";
-      
-      work W(*C);   
+
+      work W(*C);
       W.exec( sql );
       W.commit();
 
@@ -94,24 +99,24 @@ void makeTransfers (connection *C, std::vector<Parse::Transfer> *parsedTransfer)
 	cout << otherTags << endl;
 	//add = "UPDATE transfers SET tag = array_cat(tag, '{" +otherTags + "}');";
 	add = "UPDATE transfers SET tag = tag || '{" + otherTags + "}';";
-	work A(*C);   
+	work A(*C);
 	A.exec( add );
 	A.commit();
       }
     }
-    
+
     string transFrom = "UPDATE accounts SET balance=balance - " + amount +
-      " WHERE account_num = " + origin + ";"; 
-    work F(*C);   
+      " WHERE account_num = " + origin + ";";
+    work F(*C);
     F.exec( transFrom );
     F.commit();
 
     string transTo = "UPDATE accounts SET balance=balance + " + amount +
-      " WHERE account_num = " + destination + ";"; 
-    work T(*C);   
+      " WHERE account_num = " + destination + ";";
+    work T(*C);
     T.exec( transTo );
     T.commit();
-  }   
+  }
 }
 
 

@@ -74,7 +74,8 @@ void ComboMT::serviceRequest(int client_connection_fd){
   readXBytes(client_connection_fd, sizeof(length), (void*)(&length));
   length = be64toh(length);
   cout << length << endl;
-  char buffer[length] = {};
+  char buffer[length+1] = {};
+  memset(buffer, '\0', sizeof(char)*(length+1));
   readXBytes(client_connection_fd, length, (void*)buffer);
 
   // Then process the data as needed.

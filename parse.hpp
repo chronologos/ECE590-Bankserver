@@ -66,12 +66,21 @@ public:
     std::vector<std::shared_ptr<Query>> notQueries;
     std::string query;
     bool ready;
+    bool error;
     std::vector<std::string> tags;
   };
 
+  struct Create{
+    bool error;
+    long long account;
+    bool accountSet;
+    double balance;
+    std::string ref;
+  };
+
   bool reset;
+  std::vector<std::shared_ptr<Create>> creates;
   std::vector<std::tuple<long long, std::string>> balances;
-  std::vector<std::tuple<long long, double, std::string>> creates;
   std::vector<Transfer> transfers;
   std::vector<std::shared_ptr<Query>> queries;
   std::string translateQuery(std::shared_ptr<Query> q);
@@ -83,7 +92,7 @@ private:
   bool isText(xercesc::DOMNode *node);
   const XMLCh* parseLeafElem(xercesc::DOMNode *node);
   void parseTransferElemNode(xercesc::DOMNode *node);
-  void parseCreateElemNode(xercesc::DOMNode *node);
+  void parseCreateElemNode(xercesc::DOMNode *node, std::shared_ptr<Create> createPtr);
   void parseBalanceElemNode(xercesc::DOMNode *node);
   void parseQueryElemNode(xercesc::DOMNode *node, std::shared_ptr<Query> queryPtr);
   void parseQueryRelop(xercesc::DOMNode *node, std::shared_ptr<Query> q, std::string op);

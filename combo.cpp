@@ -33,10 +33,10 @@ using namespace xercesc;
 
 // This assumes buffer is at least x bytes long,
 // and that the socket is blocking.
-void ReadXBytes(int socket, unsigned int x, void* buffer)
+void ReadXBytes(int socket, uint64_t x, void* buffer)
 {
-  int bytesRead = 0;
-  int result;
+  uint64_t bytesRead = 0;
+  uint64_t result;
   while (bytesRead < x)
   {
     result = read(socket, buffer + bytesRead, x - bytesRead);
@@ -48,6 +48,7 @@ void ReadXBytes(int socket, unsigned int x, void* buffer)
       bytesRead += result;
     }
   }
+  cout << bytesRead << endl;
 }
 
 int main(int argc, char *argv[])
@@ -144,13 +145,15 @@ int main(int argc, char *argv[])
   ReadXBytes(client_connection_fd, sizeof(length), (void*)(&length));
   length = be64toh(length);
   cout << length << endl;
-  char buffer[length] = {};
+  char buffer[length+1] = {};
+  memset(buffer, '\0', sizeof(char)*(length+1));
+  cout << buffer << endl;
   ReadXBytes(client_connection_fd, length, (void*)buffer);
 
   // Then process the data as needed.
 
   string s(buffer);
-  //jcout << buffer << endl;
+  cout << buffer << endl;
 
 
   //jcout << s << endl;
