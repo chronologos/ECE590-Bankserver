@@ -26,6 +26,7 @@
 #include <xercesc/parsers/XercesDOMParser.hpp>
 #include <xercesc/util/XMLUni.hpp>
 
+#include <memory>
 #include <string>
 #include <stdexcept>
 #include <tuple>
@@ -58,16 +59,12 @@ public:
   };
 
 
-  struct LeafQuery{
-    std::string query;
-  };
-
   struct Query{
     std::string ref;
-    std::vector<std::reference_wrapper<Query>> andQueries;
-    std::vector<std::reference_wrapper<Query>> orQueries;
-    std::vector<std::reference_wrapper<Query>> notQueries;
-    LeafQuery *leaf;
+    std::vector<std::shared_ptr<Query>> andQueries;
+    std::vector<std::shared_ptr<Query>> orQueries;
+    std::vector<std::shared_ptr<Query>> notQueries;
+    std::string query;
     bool ready;
     std::vector<std::string> tags;
   };
@@ -76,8 +73,8 @@ public:
   std::vector<std::tuple<long long, std::string>> balances;
   std::vector<std::tuple<long long, double, std::string>> creates;
   std::vector<Transfer> transfers;
-  std::vector<Query> queries;
-  std::string translateQuery(Query &q);
+  std::vector<std::shared_ptr<Query>> queries;
+  std::string translateQuery(std::shared_ptr<Query> q);
 
 private:
   xercesc::XercesDOMParser *m_FileParser;
@@ -88,9 +85,9 @@ private:
   void parseTransferElemNode(xercesc::DOMNode *node);
   void parseCreateElemNode(xercesc::DOMNode *node);
   void parseBalanceElemNode(xercesc::DOMNode *node);
-  void parseQueryElemNode(xercesc::DOMNode *node, Query &query);
-  void parseQueryRelop(xercesc::DOMNode *node, LeafQuery *lq, std::string op);
-  std::string translateQueryInner(std::vector<std::reference_wrapper<Query>> qq, std::string res, std::string op);
+  void parseQueryElemNode(xercesc::DOMNode *node, std::shared_ptr<Query> queryPtr);
+  void parseQueryRelop(xercesc::DOMNode *node, std::shared_ptr<Query> q, std::string op);
+  std::string translateQueryInner(std::vector<std::shared_ptr<Query>> qq, std::string res, std::string op);
 
   //  ParserErrorHandler parserErrorHandler;
   // Internal class use only. Hold Xerces data in UTF-16 SMLCh type.
