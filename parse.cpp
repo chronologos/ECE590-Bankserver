@@ -203,11 +203,11 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
 
         for (XMLSize_t i = 0; i < nodeCount; ++i) {
           DOMNode *currentNode = children->item(i);
-          cout << "current node is " << XMLString::transcode(currentNode->getNodeName()) << endl;
+          // cout << "current node is " << XMLString::transcode(currentNode->getNodeName()) << endl;
           if (isElem(currentNode)) {
             Parse::parseElemNode(currentNode);
           }
-          cout << "------------------------" << endl;
+          // cout << "------------------------" << endl;
         }
         // DEBUG PRINTS
         cout << "Done! Printing final creates vector:" << endl;
@@ -293,7 +293,7 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
       }
 
       else if (XMLString::equals(currentElement->getTagName(), TAG_query)) {
-        cout << "parsing query" << endl;
+        // cout << "parsing query" << endl;
         std::shared_ptr<Query> queryPtr(new Query()); //empty struct
         const XMLCh* ref = currentElement->getAttribute(ATTR_ref);
         queryPtr->ref=XMLString::transcode(ref);
@@ -302,8 +302,8 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
             parseQueryElemNode(children->item(i), queryPtr);
           }
           queries.push_back(queryPtr);
-          cout << "done with query" << endl;
-          cout << Parse::translateQuery(queryPtr) << endl;
+          // cout << "done with query" << endl;
+          // cout << Parse::translateQuery(queryPtr) << endl;
         }
       }
     }
@@ -317,16 +317,9 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
     }
 
     void Parse::parseCreateElemNode(DOMNode *node, Parse::Create &create){
-      cout << "in parseCreateElemNode!" <<endl;
-      printf("%p", node);
       if (isElem(node)){
-        cout << "in parseCreateElemNode before cast!" <<endl;
-
         DOMElement *currentElement = dynamic_cast<xercesc::DOMElement *>(node);
-        cout << "in parseCreateElemNode CE!" <<endl;
-
         if (XMLString::equals(currentElement->getTagName(),TAG_account)) {
-          cout << "TAG_account found" << endl;
           const XMLCh* accountNumber = parseLeafElem(node);
           char* accountNumberStr = XMLString::transcode(accountNumber);
           create.account = std::stoll(accountNumberStr);
@@ -334,7 +327,6 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
           XMLString::release(&accountNumberStr);
         }
         else if (XMLString::equals(currentElement->getTagName(),TAG_balance)){
-          cout << "TAG_balance found" << endl;
           const XMLCh* balance = parseLeafElem(node);
           char* balanceStr = XMLString::transcode(balance);
           create.balance = std::stod(balanceStr);
@@ -354,21 +346,18 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
         if (XMLString::equals(currentElement->getTagName(), TAG_amount)) {
           const XMLCh* transferAmount = parseLeafElem(node);
           char* transferAmountStr = XMLString::transcode(transferAmount);
-          cout << "transferring: " << transferAmountStr << endl;
           currentTransfer.amount = stod(transferAmountStr);
           XMLString::release(&transferAmountStr);
         }
         else if (XMLString::equals(currentElement->getTagName(), TAG_from)) {
           const XMLCh* from = parseLeafElem(node);
           char* fromStr = XMLString::transcode(from);
-          cout << "from:" << fromStr << endl;
           currentTransfer.from = stoll(fromStr);
           XMLString::release(&fromStr);
         }
         else if (XMLString::equals(currentElement->getTagName(), TAG_to)) {
           const XMLCh* to = parseLeafElem(node);
           char* toStr = XMLString::transcode(to);
-          cout << "to: " << toStr << endl;
           currentTransfer.to = stoll(toStr);
           XMLString::release(&toStr);
         }
@@ -379,11 +368,9 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
           XMLString::release(&tagStr);
         }
         else {
-          cout << "??" << endl;
         }
       }
       else {
-        cout << "?" << endl;
       }
     }
 
@@ -403,27 +390,18 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
       if (fstr != empty){
         std::string s = "(origin " + op + " " + fstr + ") ";
         q->query = s;
-        cout << "in parseQueryRelopA" << endl;
-        cout << s << endl;
-
       }
 
       else if (tstr != empty){
-        cout << "in parseQueryRelopB" << endl;
         std::string s = "(destination " + op + " " + tstr + ") ";
-        cout << s << endl;
         q->query = s;
       }
 
       else if (astr != empty){
-        cout << "in parseQueryRelopC" << endl;
         std::string s = "(amount " + op + " " + amtStr + ") ";
         q->query = s;
-        cout << s << endl;
-
       }
       else{
-        cout << "ERROR! missing <from> <to> or <amount> tag" << endl;
         std::string s = "";
         q->query = s;
       }
@@ -482,7 +460,6 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
 
             parseQueryRelop(node, queryPtr, op);
           }
-          cout << "in parseQueryElemNode4a" << endl;
         }
 
         else if (XMLString::equals(currentElement->getTagName(), TAG_tag)) {
@@ -490,21 +467,16 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
           if (!isParent(node, ll)){
             std::shared_ptr<Query> newQueryPtr(new Query());
             newQueryPtr->tags.push_back(tag);
-            cout << "tag is " << tag << endl;
             queryPtr->andQueries.push_back(newQueryPtr);
           }
           else {
             queryPtr->tags.push_back(tag);
-            cout << "tag is " << tag << endl;
-
           }
-          cout << "in parseQueryElemNode4b" << endl;
           // XMLString::release(&tagStr);
         }
 
         else if (XMLString::equals(currentElement->getTagName(), TAG_and)) {
           std::shared_ptr<Query> newQueryPtr(new Query()); //empty struct
-          cout << "in and" << endl;
           for (XMLSize_t i = 0; i < count; ++i) {
             parseQueryElemNode(children->item(i), newQueryPtr);
           }
@@ -513,18 +485,15 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
 
         else if (XMLString::equals(currentElement->getTagName(), TAG_or)) {
           std::shared_ptr<Query> newQueryPtr(new Query()); //empty struct
-          cout << "in or" << endl;
           for (XMLSize_t i = 0; i < count; ++i) {
             parseQueryElemNode(children->item(i), newQueryPtr);
           }
 
           queryPtr->orQueries.push_back(std::move(newQueryPtr));
           auto test = queryPtr->orQueries[0];
-          cout << "testing in parseQueryElemNode " << test->query << endl;
         }
         else if (XMLString::equals(currentElement->getTagName(), TAG_not)) {
           std::shared_ptr<Query> newQueryPtr(new Query()); //empty struct
-          cout << "in not" << endl;
           for (XMLSize_t i = 0; i < count; ++i) {
             parseQueryElemNode(children->item(i), newQueryPtr);
           }
@@ -535,14 +504,12 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
     }
 
     const XMLCh* Parse::parseLeafElem(DOMNode *node){
-      cout << "in parseLeafElem!" <<endl;
       DOMNodeList *children = node->getChildNodes();
       const XMLSize_t count = children->getLength();
       for (XMLSize_t i = 0; i < count; ++i) {
         if(isText(children->item(i))){
           DOMText *currentTextData = dynamic_cast<xercesc::DOMText *>(children->item(i));
           const XMLCh* data = currentTextData->getWholeText(); // TODO need to free XMLCh from transcode
-          // cout << XMLString::transcode(data) << endl;
           return data;
         }
       }
@@ -551,7 +518,6 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
     }
 
     std::string Parse::translateQuery(shared_ptr<Parse::Query> queryPtr){
-      cout << "in translateQuery" << endl;
       std::string res = "SELECT * FROM transfers WHERE ";
       // auto tsize = queryPtr->tags.size();
       // for (auto i=0; i<tsize; i++){
@@ -595,7 +561,6 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
     }
 
     std::string Parse::translateQueryInner(std::vector<shared_ptr<Parse::Query>> queries, std::string res, std::string op){
-      // cout << "translateQueryInner called with " << op << endl;
       auto size = queries.size();
       if (size == 0) {
         return "";
@@ -608,7 +573,6 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
         if (!queries[i]->ready){
 
           // recurse!
-          // cout << "recurse" << endl;
           if (andSize != 0) {
             res += translateQueryInner(queries[i]->andQueries, "", "AND");
           }
@@ -632,7 +596,6 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
         }
 
         if (queries[i]->tags.size()>0) {
-          // cout << "tags" << endl;
           auto tsize = queries[i]->tags.size();
           if (tsize >0){
             for (uint32_t j = 0; j < tsize; j++){
@@ -647,16 +610,12 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
           }
         }
         else {
-          // cout << "base case" << endl;
-          // base case
-          // cout << "?" << endl;
           res += queries[i]->query;
         }
         if (i != queries.size()-1){
           res += op + " ";
         }
       }
-      // cout << res << endl;
       res += ")";
       return res;
     }

@@ -26,54 +26,16 @@
 
 #include "parse.hpp"
 #include "db.h"
-
+#include "utility.hpp"
 
 using namespace std;
 using namespace xercesc;
 
 // This assumes buffer is at least x bytes long,
 // and that the socket is blocking.
-void ReadXBytes(int socket, uint64_t x, void* buffer)
-{
-  uint64_t bytesRead = 0;
-  uint64_t result;
-  while (bytesRead < x)
-  {
-    result = read(socket, buffer + bytesRead, x - bytesRead);
-    if (result < 1 )
-    {
-      cout << "socket error" << endl;
-    }
-    else{
-      bytesRead += result;
-    }
-  }
-  cout << bytesRead << endl;
-}
 
-void WriteBytes(int socket, string str) {
-  uint64_t bytesToWrite = str.size();
-  char *buffer = new char[bytesToWrite + 8];
-  *(uint64_t*)buffer = htobe64(bytesToWrite);
-  strcpy(buffer+8, str.c_str());
-  bytesToWrite += 8;
-  uint64_t bytesWritten = 0;
-  uint64_t result;
 
-  while (bytesToWrite > bytesWritten){
-    result = send(socket, buffer + bytesWritten, bytesToWrite- bytesWritten, 0);
-    if (result < 1 )
-    {
-      cout << "socket error" << endl;
-    }
-    else{
-      bytesWritten += result;
-    }
-  }
-}
-
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   int status;
   int socket_fd;
   struct addrinfo host_info;
@@ -166,6 +128,54 @@ int main(int argc, char *argv[])
   // start constructing reply
   string reply = "";
   reply += "<?xml version='1.0' encoding='UTF-8'?>\r\n<results>\r\n";
+  ostringstream resStream;
+  for (auto &createResult : createResults){
+    if (createResult.success && createResult.ref != "") {
+      resStream << "<success " << "ref=\"" << createResult.ref << "\">" << "created</success>\r\n";
+    }
+    else if (createResult.success && createResult.ref == "") {
+      resStream << "<success>created</success>\r\n";
+    }
+    else if (!createResult.success && createResult.ref != "") {
+      resStream << "<error " << "ref=\"" << createResult.ref + "\">" << "not created</error>\r\n";
+    }
+    else if (!createResult.success && createResult.ref == "") {
+      resStream << "<error>not created</error>\r\n";
+    }
+  }
+
+  for (auto &balanceResult : balanceResults){
+    if (balanceResult.success && balanceResult.ref != "") {
+      resStream << "<success " << "ref=\"" << balanceResult.ref << "\">" << to_string(balanceResult.balance) << "</success>\r\n";
+    }
+    else if (balanceResult.success && balanceResult.ref == "") {
+      resStream << "<success>" << to_string(balanceResult.balance) << "</success>\r\n";
+
+    }
+    else if (!balanceResult.success && balanceResult.ref != "") {
+      resStream << "<error " << "ref=\"" << balanceResult.ref << "\">" << "balance not found</error>\r\n";
+    }
+    else if (!balanceResult.success && balanceResult.ref == "") {
+      resStream << "<error>balance not found</error>\r\n";
+    }
+  }
+
+  for (auto &transferResult : transferResults){
+    if (transferResult.success && transferResult.ref != "") {
+      resStream << "<success " << "ref=\"" << transferResult.ref << "\">" << "transferred</success>\r\n";
+    }
+    else if (transferResult.success && transferResult.ref == "") {
+      resStream << "<success>transferred</success>\r\n";
+    }
+    else if (!transferResult.success && transferResult.ref != "") {
+      resStream << "<error " << "ref=\"" << transferResult.ref << "\">" << "not transferred</error>\r\n";
+    }
+    else if (!transferResult.success && transferResult.ref == "") {
+      resStream << "<error>not transferred</error>\r\n";
+    }
+  }
+  reply += resStream.str();
+
   for (auto &queryResults : queriesResults){
     if (queryResults->ref != "") {
       reply += "  <results ref=\"" + queryResults->ref + "\">\r\n";
@@ -183,7 +193,9 @@ int main(int argc, char *argv[])
     }
     reply += "  </results>\r\n";
   }
+
   reply += "</results>";
+
   cout << "OUR REPLY:" << endl;
   cout << reply << endl;
   cout << reply.size() << endl;
