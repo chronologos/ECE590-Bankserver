@@ -3,55 +3,64 @@
 #include <sstream>
 #include <pqxx/pqxx>
 #include <string>
+#include <vector>
 #include "db.h"
+
 //#include "exerciser.h"
 //#include "query_funcs.h"
 
-void addAccount (connection *C) {
-
-  
-
-
-
-  string line, attr;
-  int count = 0;
-  vector<string> v;
-  ifstream playerFile ("player.txt");
-  if (playerFile.is_open()) {
-    while (getline (playerFile, line)) {
-      if (line.empty()) {
-	continue;}
-      stringstream ss(line);
-      while (getline(ss, attr, ' ')) {
-	v.push_back(attr);
-      }
-      count++;
-    }
-  }
-  else {
-    cout << "Unable to open file." << endl;
-  }
-  int i = 0;
-  //int team_id = 0;
-  for(i; i < count; i++) {
-    int set = i * 11;
-    int team_id = stoi(v[set+1]);
-    int jersey_num = stoi(v[set+2]);
-    string first_name = v[set+3];
-    string last_name = v[set+4];
-    int mpg = stoi(v[set+5]);
-    int ppg = stoi(v[set+6]);
-    int rpg = stoi(v[set+7]);
-    int apg = stoi(v[set+8]);
-    double spg = stod(v[set+9]);
-    double bpg = stod(v[set+10]);
-    add_player(C, team_id, jersey_num, first_name, last_name, mpg, ppg, rpg, apg, spg, bpg);
-  }
-  playerFile.close();
-}
-
 using namespace std;
 using namespace pqxx;
+
+
+void addAccount (connection *C, std::vector<std::tuple<long long, double, std::string>> *parsedAccounts) {
+
+  for (auto it = parsedAccounts->begin(); it != parsedAccounts->end(); ++it) {
+    //cout << "HEY" << endl;
+    //cout << std::get<0>(*it) << endl;;
+
+    string sql;
+    string accountNum = to_string(std::get<0>(*it));
+    string balance = to_string(std::get<1>(*it));
+    
+    sql = "INSERT INTO ACCOUNTS (ACCOUNT_NUM,BALANCE)"			\
+      "VALUES (" + accountNum + "," + balance + ");";
+    
+    /* Create a transactional object. */
+    work W(*C);
+    
+    /* Execute SQL query */
+    W.exec( sql );
+    W.commit();
+  }
+}
+
+void balanceCheck (connection *C, vector<std::tuple<long long, string>> *parsedBalance) {
+
+  for (auto it = parsedBalance->begin(); it != parsedBalance->end(); ++it) {
+    //cout << "HEY" << endl;
+    //cout << std::get<0>(*it) << endl;
+
+    string sql;
+    string accountNum = to_string(std::get<0>(*it));
+    
+    sql = "SELECT balance FROM accounts WHERE account_num = " +  accountNum;
+
+    /* Create a non-transactional object. */
+    nontransaction N(*C);
+
+    /* Execute SQL query */
+    result R( N.exec( sql ));
+
+    /* List down all the records */
+    cout << "Balance" << endl;
+    for (result::const_iterator c = R.begin(); c != R.end(); ++c) {
+      cout <<c[0].as<string>()<< endl << endl;
+    }
+    //cout << "Operation done successfully" << endl;
+  }
+}
+
 
 connection * dbRun (int reset) {
   //Allocate & initialize a Postgres connection object

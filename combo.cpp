@@ -150,10 +150,10 @@ int main(int argc, char *argv[])
   // Then process the data as needed.
 
   string s(buffer);
-  cout << buffer << endl;
+  //jcout << buffer << endl;
 
 
-  cout << s << endl;
+  //jcout << s << endl;
   Parse parser;
   parser.readFile(s, true);
 
@@ -174,7 +174,9 @@ int main(int argc, char *argv[])
 
 
  //DB insertion calls
- addAccounts(C);
+
+ addAccount(C, &parser.creates);
+ balanceCheck(C, &parser.balances);
 
 //Send response back to the client
   std::string test = "Got your message"; //Test call, will be XML response
