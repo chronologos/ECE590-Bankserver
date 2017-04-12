@@ -434,6 +434,10 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
         const XMLSize_t count = children->getLength();
         std::vector<XMLCh*> l = {TAG_greater, TAG_equals, TAG_less};
         std::vector<XMLCh*> ll = {TAG_and, TAG_or, TAG_not};
+        std::vector<XMLCh*> andl = {TAG_and};
+        std::vector<XMLCh*> orl = {TAG_or};
+        std::vector<XMLCh*> notl = {TAG_not};
+
         // RELOPS
         if (isTag(currentElement, l)) {
           std::string op = "";
@@ -456,12 +460,20 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
           }
           else {
             cout << "nested thing" << endl;
-
-            if (!queryPtr->ready){
-              queryPtr->ready = true;
+            std::shared_ptr<Query> newQueryPtr(new Query());
+            newQueryPtr->ready = true;
+            if (isParent(node,andl)){
+              queryPtr->andQueries.push_back(newQueryPtr);
             }
 
-            parseQueryRelop(node, queryPtr, op);
+            else if (isParent(node,orl)){
+              queryPtr->orQueries.push_back(newQueryPtr);
+            }
+
+            else if (isParent(node,notl)){
+              queryPtr->notQueries.push_back(newQueryPtr);
+            }
+            parseQueryRelop(node, newQueryPtr, op);
           }
         }
 
@@ -540,25 +552,26 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
       auto andSize = queryPtr->andQueries.size();
       auto orSize = queryPtr->orQueries.size();
       auto notSize = queryPtr->notQueries.size();
-      if (andSize>0){
-        string s = "";
-        res += "(";
-        res += translateQueryInner(queryPtr->andQueries, s, "AND");
-        res += ") ";
+      if (andSize != 0) {
+        cout << "aha" << endl;
+        res += translateQueryInner(queryPtr->andQueries, "", "AND");
       }
-      if (orSize>0){
-        string s = "";
-        res += "OR (";
-        res += translateQueryInner(queryPtr->orQueries, s, "OR");
-        res += ") ";
-
+      if (orSize != 0 && andSize != 0){
+        res += "AND";
+        res += translateQueryInner(queryPtr->orQueries, "", "OR");
       }
-      if (notSize>0){
-        string s = "";
-        res += "NOT (";
-        res += translateQueryInner(queryPtr->notQueries, s, "NOT");
-        res += ") ";
-
+      else if (orSize != 0){
+        res += translateQueryInner(queryPtr->orQueries, "", "OR");
+      }
+      if (notSize != 0 && (orSize != 0 || andSize != 0)){
+        res += "AND (NOT";
+        res += translateQueryInner(queryPtr->notQueries, "", "NOT");
+        res += ")";
+      }
+      else if (notSize != 0){
+        res += "NOT";
+        res += translateQueryInner(queryPtr->notQueries, "", "NOT");
+        res += "";
       }
       return res;
     }
@@ -577,10 +590,11 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
 
           // recurse!
           if (andSize != 0) {
+            cout << "aha" << endl;
             res += translateQueryInner(queries[i]->andQueries, "", "AND");
           }
           if (orSize != 0 && andSize != 0){
-            res += "OR";
+            res += "AND";
             res += translateQueryInner(queries[i]->orQueries, "", "OR");
           }
           else if (orSize != 0){
