@@ -69,8 +69,8 @@ class LoadTest():
                     # send request to server
                     print("sending request of size of {0}".format(tfile_size))
                     s.sendall(struct.pack("!Q", tfile_size))
-
                     s.sendall(l)
+
 
 
                     # read response from serve
