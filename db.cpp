@@ -39,31 +39,51 @@ std::vector<addResult> addAccount (connection *C, std::vector<Parse::Create> *pa
   for (auto it = parsedAccounts->begin(); it != parsedAccounts->end(); ++it) {
     //cout << "HEY" << endl;
     //cout << std::get<0>(*it) << endl;;
-    addResult result = {}; //empty struct
-    result.success = true;
+    addResult structResult = {}; //empty struct
+    structResult.success = true;
 
     string sql;
     bool error = ((*it).error);
     if (error){
-      result.success = false;
+      structResult.success = false;
     }
     string account = to_string((*it).account);
     string balance = to_string((*it).balance);
     string ref = to_string((*it).ref);
-    result.ref = ref;
+    structResult.ref = ref;
+    
+    //Error checking
+    string err = "SELECT EXISTS (SELECT TRUE FROM accounts WHERE account_num=" + account+ ");";
+    string status;
 
-
-
-    sql = "INSERT INTO ACCOUNTS (ACCOUNT_NUM,BALANCE)"			\
-    "VALUES (" + account + "," + balance + ");";
-
-    /* Create a transactional object. */
-    work W(*C);
-
-    /* Execute SQL query */
-    W.exec( sql );
-    W.commit();
-    res.push_back(result);
+    nontransaction E(*C);
+    result R( E.exec( err ));   
+    for (result::const_iterator c = R.begin(); c != R.end(); ++c) {
+      //cout <<c[0].as<string>()<< endl << endl;
+      status=c[0].as<string>();
+    }
+    
+    if (status == "t") {
+      E.commit();
+      structResult.success = false;
+      res.push_back(structResult);
+    }
+    else {
+      E.commit();
+       sql = "INSERT INTO ACCOUNTS (ACCOUNT_NUM,BALANCE)"	\
+	"VALUES (" + account + "," + balance + ");";
+      
+      work W(*C);
+      
+      try {
+	/* Execute SQL query */
+	W.exec( sql );
+	W.commit();
+	}
+	catch (...) {
+	}
+      res.push_back(structResult);
+    }
   }
   return res;
 }
@@ -78,24 +98,44 @@ std::vector<balanceResult> balanceCheck (connection *C, vector<std::tuple<long l
 
     string sql;
     string accountNum = to_string(std::get<0>(*it));
+    balanceresult.ref = std::get<1>(*it);
+    
+    //Error checking
+    string err = "SELECT EXISTS (SELECT TRUE FROM accounts WHERE account_num=" + accountNum+ ");";
+    string status;
 
-    sql = "SELECT balance FROM accounts WHERE account_num = " +  accountNum;
-
-    /* Create a non-transactional object. */
-    nontransaction N(*C);
-
-    /* Execute SQL query */
-    result R( N.exec( sql ));
-
-    /* List down all the records */
-    cout << "Balance" << endl;
+    nontransaction E(*C);
+    result R( E.exec( err ));   
     for (result::const_iterator c = R.begin(); c != R.end(); ++c) {
-      cout <<c[0].as<string>()<< endl << endl;
-      balanceresult.balance=c[0].as<double>();
-
+      status=c[0].as<string>();
     }
-    //cout << "Operation done successfully" << endl;
-    res.push_back(balanceresult);
+   
+    if (status == "f") {
+      E.commit();
+      balanceresult.success = false;
+      res.push_back(balanceresult);
+    }
+    else {
+      E.commit();
+      
+      sql = "SELECT balance FROM accounts WHERE account_num = " +  accountNum;
+      
+      /* Create a non-transactional object. */
+      nontransaction N(*C);
+      
+      /* Execute SQL query */
+      result R( N.exec( sql ));
+      
+      /* List down all the records */
+      cout << "Balance" << endl;
+      for (result::const_iterator c = R.begin(); c != R.end(); ++c) {
+	cout <<c[0].as<string>()<< endl << endl;
+	balanceresult.balance=c[0].as<double>();
+	
+      }
+      //cout << "Operation done successfully" << endl;
+      res.push_back(balanceresult);
+    }
   }
   return res;
 }
@@ -116,48 +156,87 @@ vector<transferResult> makeTransfers (connection *C, std::vector<Parse::Transfer
     string destination = to_string((*it).to);
 
     int numTags = (*it).tags.size();
+        
+    //Error checking
+    int skip = 0;
+    if ( skip == 0){
+      string err1 = "SELECT EXISTS (SELECT TRUE FROM accounts WHERE account_num=" + origin+ ");";
+      string status1;
 
-    if (numTags == 0) {
-      sql = "INSERT INTO TRANSFERS (AMOUNT,ORIGIN,DESTINATION)"			\
-      "VALUES (" + amount + "," + origin + "," + destination + ");";
-      work W(*C);
-      W.exec( sql );
-      W.commit();
-    }
-    else {
-      string tag = (*it).tags[0];
-      sql = "INSERT INTO TRANSFERS (AMOUNT,ORIGIN,DESTINATION,TAG)"	\
-      "VALUES (" + amount + "," + origin + "," + destination + ",'{" + tag + "}');";
-
-      work W(*C);
-      W.exec( sql );
-      W.commit();
-
-      string add;
-      for(int i = 1; i < numTags; i++) {
-        string otherTags = (*it).tags[i];
-        cout << otherTags << endl;
-        //add = "UPDATE transfers SET tag = array_cat(tag, '{" +otherTags + "}');";
-        add = "UPDATE transfers SET tag = tag || '{" + otherTags + "}';";
-        work A(*C);
-        A.exec( add );
-        A.commit();
+      nontransaction E1(*C);
+      result R1( E1.exec( err1 ));
+      for (result::const_iterator c = R1.begin(); c != R1.end(); ++c) {
+	status1=c[0].as<string>();
+      } 
+      if (status1 == "f") {
+	transferresult.success = false;
+	res.push_back(transferresult);
+	skip = 1;
       }
+      E1.commit();
     }
-
-    string transFrom = "UPDATE accounts SET balance=balance - " + amount +
-    " WHERE account_num = " + origin + ";";
-    work F(*C);
-    F.exec( transFrom );
-    F.commit();
-
-    string transTo = "UPDATE accounts SET balance=balance + " + amount +
-    " WHERE account_num = " + destination + ";";
-    work T(*C);
-    T.exec( transTo );
-    T.commit();
-    res.push_back(transferresult);
-  }
+    if (skip != 1) {
+      string err2 = "SELECT EXISTS (SELECT TRUE FROM accounts WHERE account_num=" + destination+ ");";
+      string status2;
+      
+      nontransaction E2(*C);
+      result R2( E2.exec( err2 ));
+      for (result::const_iterator c = R2.begin(); c != R2.end(); ++c) {
+	status2=c[0].as<string>();
+      }
+      
+      if (status2 == "f") {
+	transferresult.success = false;
+	res.push_back(transferresult);
+	skip = 1;
+      }
+      E2.commit();
+    }
+    if (skip != 1) {
+    
+      if (numTags == 0) {
+	sql = "INSERT INTO TRANSFERS (AMOUNT,ORIGIN,DESTINATION)"	\
+	  "VALUES (" + amount + "," + origin + "," + destination + ");";
+	work W(*C);
+	W.exec( sql );
+	W.commit();
+      }
+      else {
+	string tag = (*it).tags[0];
+	sql = "INSERT INTO TRANSFERS (AMOUNT,ORIGIN,DESTINATION,TAG)"	\
+	  "VALUES (" + amount + "," + origin + "," + destination + ",'{" + tag + "}');";
+	
+	work W(*C);
+	W.exec( sql );
+	W.commit();
+	
+	string add;
+	for(int i = 1; i < numTags; i++) {
+	  string otherTags = (*it).tags[i];
+	  cout << otherTags << endl;
+	  //add = "UPDATE transfers SET tag = array_cat(tag, '{" +otherTags + "}');";
+	  add = "UPDATE transfers SET tag = tag || '{" + otherTags + "}';";
+	  work A(*C);
+	  A.exec( add );
+	  A.commit();
+	}
+      }
+      
+      string transFrom = "UPDATE accounts SET balance=balance - " + amount +
+	" WHERE account_num = " + origin + ";";
+      work F(*C);
+      F.exec( transFrom );
+      F.commit();
+      
+      string transTo = "UPDATE accounts SET balance=balance + " + amount +
+	" WHERE account_num = " + destination + ";";
+      work T(*C);
+      T.exec( transTo );
+      T.commit();
+      res.push_back(transferresult);
+    }
+}
+  
   return res;
 }
 
@@ -252,7 +331,7 @@ connection * dbRun (int reset) {
     tD.commit();
 
     cout << "Table successfully dropped." << endl;
-  }
+
 
   // Create Tables
   aString = "CREATE TABLE ACCOUNTS("		      \
@@ -276,6 +355,8 @@ connection * dbRun (int reset) {
 
   cout << "Table created successfully" << endl;
 
+
+  }
 
   //Parse .txt files and insert
   //parseAccount(C);
