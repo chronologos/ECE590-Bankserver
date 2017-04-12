@@ -409,7 +409,7 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
 
     bool isParent(DOMNode *node, std::vector<XMLCh*> pp){
       for (auto p : pp){
-        if (!XMLString::equals(dynamic_cast<xercesc::DOMElement *>(node->getParentNode())->getTagName(), p)){
+        if (XMLString::equals(dynamic_cast<xercesc::DOMElement *>(node->getParentNode())->getTagName(), p)){
           return true;
         }
       }
@@ -448,12 +448,15 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
           }
 
           if (!isParent(node, ll)){
+            cout << "non-nested thing" << endl;
             std::shared_ptr<Query> newQueryPtr(new Query());
             newQueryPtr->ready = true;
             parseQueryRelop(node, newQueryPtr, op);
             queryPtr->andQueries.push_back(newQueryPtr);
           }
           else {
+            cout << "nested thing" << endl;
+
             if (!queryPtr->ready){
               queryPtr->ready = true;
             }
@@ -578,19 +581,19 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
           }
           if (orSize != 0 && andSize != 0){
             res += "OR";
-            res += translateQueryInner(queries[1]->orQueries, "", "OR");
+            res += translateQueryInner(queries[i]->orQueries, "", "OR");
           }
           else if (orSize != 0){
-            res += translateQueryInner(queries[1]->orQueries, "", "OR");
+            res += translateQueryInner(queries[i]->orQueries, "", "OR");
           }
           if (notSize != 0 && (orSize != 0 || andSize != 0)){
             res += "AND (NOT";
-            res += translateQueryInner(queries[1]->notQueries, "", "NOT");
+            res += translateQueryInner(queries[i]->notQueries, "", "NOT");
             res += ")";
           }
           else if (notSize != 0){
             res += "NOT";
-            res += translateQueryInner(queries[1]->notQueries, "", "NOT");
+            res += translateQueryInner(queries[i]->notQueries, "", "NOT");
             res += "";
           }
         }
