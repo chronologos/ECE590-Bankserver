@@ -29,7 +29,7 @@ RESPONSE_FILE_DIR = "./responses"  # TODO
 # SWARM_SIZES = [100] # ,10000,50000,100000]
 SWARMLET_INTERVAL = [1]  # TODO
 SWARM_SIZES = [1]  # ,10000,50000,100000]
-SOCKET_TIMEOUT = 15  # seconds
+SOCKET_TIMEOUT = 25  # seconds
 MAX_WORKERS = 2
 
 # diffTrees settings
@@ -54,8 +54,11 @@ class LoadTest():
         with locktimeout:
             self.timeouts += 1
 
-    def launch_swarmling(self, t_fname, res_fname, save_response=False):
+    def launch_swarmling(self, t_fname, res_fname, save_response=False, print_testname=False):
+        time.sleep(1)
         self.increment_requests();
+        if print_testname:
+            print("Running {0} ".format(t_fname.split(".")[0]))
         tfpath = os.path.join(gentest.TEST_FILE_DIR, t_fname)
         with open(tfpath, "rb") as tfile:
             # establish connection
@@ -127,17 +130,19 @@ class LoadTest():
             print("{0}/{1} completed".format(self.requests-self.timeouts,self.requests))
 
     def testCorrectness(self):
-        self.launch_swarmling("query_test.xml","query_test_res.xml",save_response=True)
-        self.launch_swarmling("drew_test.xml","drew_test_res.xml",save_response=True)
-        self.launch_swarmling("nonexistent_account.xml","nonexistent_account_res.xml",save_response=True)
+        self.launch_swarmling("query_test.xml","query_test_res.xml",save_response=True, print_testname=True)
+        self.launch_swarmling("drew_test.xml","drew_test_res.xml",save_response=True, print_testname=True)
+        self.launch_swarmling("nonexistent_account.xml","nonexistent_account_res.xml",save_response=True, print_testname=True)
+        self.launch_swarmling("negative_bal.xml","negative_bal_res.xml",save_response=True, print_testname=True)
 
+    def checkResults(self):
+        # with open("check_response.xml") as f:
+            return
 
 def tprint(x):
     print(etree.tostring(x, pretty_print=True))
 
-def checkResults(self):
-    with open("check_response.xml") as f:
-        return
+
 
 def diffTrees(tnum, res, ans):
     # Compares two XML files and print differences to file.
@@ -194,11 +199,14 @@ def diffTrees(tnum, res, ans):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: ./load-test portno")
+    if len(sys.argv) < 2:
+        print("Usage: ./load-test portno flag\n flags are c: correctness, l: loadtest")
     l = LoadTest(host=sys.argv[1], port=12345)
-    # cProfile.run('l.testCorrectness()')
-    l.testCorrectness();
-    # l.swarm()
-    # keep result checking off critical path
-    l.checkResults()
+    flags = sys.argv[2]
+    if "c" in flags:
+        l.testCorrectness();
+        # cProfile.run('l.testCorrectness()')
+    if "l" in flags:
+        cProfile.run('l.swarm()')
+        # keep result checking off critical path
+        l.checkResults()
