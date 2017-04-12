@@ -1,14 +1,8 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <transactions>
   <transfer ref="0">
-    <from>7601648772282</from>
-    <amount>74</amount>
-    <to>873338189922</to>
-  </transfer>
-  <transfer ref="1">
-    <tag>zu</tag>
-    <from>3041115928</from>
-    <amount>51</amount>
-    <to>5816472866</to>
+    <from>6769482214</from>
+    <amount>34</amount>
+    <to>49884558992</to>
   </transfer>
 </transactions>

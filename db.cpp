@@ -51,18 +51,18 @@ std::vector<addResult> addAccount (connection *C, std::vector<Parse::Create> *pa
     string balance = to_string((*it).balance);
     string ref = to_string((*it).ref);
     structResult.ref = ref;
-    
+
     //Error checking
     string err = "SELECT EXISTS (SELECT TRUE FROM accounts WHERE account_num=" + account+ ");";
     string status;
 
     nontransaction E(*C);
-    result R( E.exec( err ));   
+    result R( E.exec( err ));
     for (result::const_iterator c = R.begin(); c != R.end(); ++c) {
       //cout <<c[0].as<string>()<< endl << endl;
       status=c[0].as<string>();
     }
-    
+
     if (status == "t") {
       E.commit();
       structResult.success = false;
@@ -72,9 +72,9 @@ std::vector<addResult> addAccount (connection *C, std::vector<Parse::Create> *pa
       E.commit();
        sql = "INSERT INTO ACCOUNTS (ACCOUNT_NUM,BALANCE)"	\
 	"VALUES (" + account + "," + balance + ");";
-      
+
       work W(*C);
-      
+
       try {
 	/* Execute SQL query */
 	W.exec( sql );
@@ -99,17 +99,17 @@ std::vector<balanceResult> balanceCheck (connection *C, vector<std::tuple<long l
     string sql;
     string accountNum = to_string(std::get<0>(*it));
     balanceresult.ref = std::get<1>(*it);
-    
+
     //Error checking
     string err = "SELECT EXISTS (SELECT TRUE FROM accounts WHERE account_num=" + accountNum+ ");";
     string status;
 
     nontransaction E(*C);
-    result R( E.exec( err ));   
+    result R( E.exec( err ));
     for (result::const_iterator c = R.begin(); c != R.end(); ++c) {
       status=c[0].as<string>();
     }
-   
+
     if (status == "f") {
       E.commit();
       balanceresult.success = false;
@@ -117,21 +117,21 @@ std::vector<balanceResult> balanceCheck (connection *C, vector<std::tuple<long l
     }
     else {
       E.commit();
-      
+
       sql = "SELECT balance FROM accounts WHERE account_num = " +  accountNum;
-      
+
       /* Create a non-transactional object. */
       nontransaction N(*C);
-      
+
       /* Execute SQL query */
       result R( N.exec( sql ));
-      
+
       /* List down all the records */
       cout << "Balance" << endl;
       for (result::const_iterator c = R.begin(); c != R.end(); ++c) {
 	cout <<c[0].as<string>()<< endl << endl;
 	balanceresult.balance=c[0].as<double>();
-	
+
       }
       //cout << "Operation done successfully" << endl;
       res.push_back(balanceresult);
@@ -156,7 +156,7 @@ vector<transferResult> makeTransfers (connection *C, std::vector<Parse::Transfer
     string destination = to_string((*it).to);
 
     int numTags = (*it).tags.size();
-        
+
     //Error checking
     int skip = 0;
     if ( skip == 0){
@@ -167,7 +167,7 @@ vector<transferResult> makeTransfers (connection *C, std::vector<Parse::Transfer
       result R1( E1.exec( err1 ));
       for (result::const_iterator c = R1.begin(); c != R1.end(); ++c) {
 	status1=c[0].as<string>();
-      } 
+      }
       if (status1 == "f") {
 	transferresult.success = false;
 	res.push_back(transferresult);
@@ -178,13 +178,13 @@ vector<transferResult> makeTransfers (connection *C, std::vector<Parse::Transfer
     if (skip != 1) {
       string err2 = "SELECT EXISTS (SELECT TRUE FROM accounts WHERE account_num=" + destination+ ");";
       string status2;
-      
+
       nontransaction E2(*C);
       result R2( E2.exec( err2 ));
       for (result::const_iterator c = R2.begin(); c != R2.end(); ++c) {
 	status2=c[0].as<string>();
       }
-      
+
       if (status2 == "f") {
 	transferresult.success = false;
 	res.push_back(transferresult);
@@ -196,10 +196,10 @@ vector<transferResult> makeTransfers (connection *C, std::vector<Parse::Transfer
     //check if balance is negative
     if (skip != 1) {
       string err3 = "SELECT balance FROM accounts WHERE account_num = " +  origin;
-      
+
       nontransaction E3(*C);
       result R3( E3.exec( err3 ));
-      
+
       /* List down all the records */
       for (result::const_iterator c = R3.begin(); c != R3.end(); ++c) {
 	//cout <<c[0].as<string>()<< endl << endl;
@@ -212,13 +212,13 @@ vector<transferResult> makeTransfers (connection *C, std::vector<Parse::Transfer
       }
       E3.commit();
     }
-    
+
     if (skip != 1) {
-    
+
       if (numTags == 0) {
 	string tag = "blank";
 	sql = "INSERT INTO TRANSFERS (AMOUNT,ORIGIN,DESTINATION, TAG)"	\
-	  "VALUES (" + amount + "," + origin + "," + destination + "," + tag + ");";
+	  "VALUES (" + amount + "," + origin + "," + destination + ",'{" + tag + "}');";
 	work W(*C);
 	W.exec( sql );
 	W.commit();
@@ -227,11 +227,11 @@ vector<transferResult> makeTransfers (connection *C, std::vector<Parse::Transfer
 	string tag = (*it).tags[0];
 	sql = "INSERT INTO TRANSFERS (AMOUNT,ORIGIN,DESTINATION,TAG)"	\
 	  "VALUES (" + amount + "," + origin + "," + destination + ",'{" + tag + "}');";
-	
+
 	work W(*C);
 	W.exec( sql );
 	W.commit();
-	
+
 	string add;
 	for(int i = 1; i < numTags; i++) {
 	  string otherTags = (*it).tags[i];
@@ -243,13 +243,13 @@ vector<transferResult> makeTransfers (connection *C, std::vector<Parse::Transfer
 	  A.commit();
 	}
       }
-      
+
       string transFrom = "UPDATE accounts SET balance=balance - " + amount +
 	" WHERE account_num = " + origin + ";";
       work F(*C);
       F.exec( transFrom );
       F.commit();
-      
+
       string transTo = "UPDATE accounts SET balance=balance + " + amount +
 	" WHERE account_num = " + destination + ";";
       work T(*C);
@@ -258,7 +258,7 @@ vector<transferResult> makeTransfers (connection *C, std::vector<Parse::Transfer
       res.push_back(transferresult);
     }
 }
-  
+
   return res;
 }
 
@@ -388,4 +388,3 @@ connection * dbRun (int reset) {
 
   return C;
 }
-
