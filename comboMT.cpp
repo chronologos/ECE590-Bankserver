@@ -10,7 +10,6 @@
 #endif
 
 #include <iostream>
-#include <csignal>
 #include <cstring>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -19,109 +18,139 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <algorithm>
+#include <numeric>
+#include <future>
 
 #include <errno.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <thread>
 #include <unistd.h>
 
 #include "parse.hpp"
-#include "comboMT.hpp"
 #include "db.h"
+#include "utility.hpp"
 
 using namespace std;
 using namespace xercesc;
 
-
-ComboMT::ComboMT() {
-  RUNNING = true;
-  runningThreads = std::vector<std::thread>();
-}
-
-ComboMT::~ComboMT() {}
-
-// void ComboMT::signalHandler(int signum) {
-//   cout << "Interrupt signal (" << signum << ") received.\n";
-//   RUNNING = false;
-//   cout << "waiting for all threads to finish" << endl;
-//   for (auto t: runningThreads){
-//     t.join();
-//   }
-//   exit(signum);
-// }
-
 // This assumes buffer is at least x bytes long,
 // and that the socket is blocking.
-void ComboMT::readXBytes(int socket, unsigned int x, void* buffer){
-  int bytesRead = 0;
-  int result;
-  while (bytesRead < x)
-  {
-    result = read(socket, buffer + bytesRead, x - bytesRead);
-    if (result < 1 )
-    {
-      cout << "socket error" << endl;
-    }
-    else{
-      bytesRead += result;
-    }
-  }
-}
 
-void ComboMT::serviceRequest(int client_connection_fd){
+void serviceRequest(int client_connection_fd){
+  //after accept, pthread create
+  connection *C;
   uint64_t length = 0;
-  readXBytes(client_connection_fd, sizeof(length), (void*)(&length));
+  // char* buffer = 0;
+  // we assume that sizeof(length) will return 4 here.
+  ReadXBytes(client_connection_fd, sizeof(length), (void*)(&length));
   length = be64toh(length);
   cout << length << endl;
-  char buffer[length+1] = {};
+  char *buffer = new char[length+1];
   memset(buffer, '\0', sizeof(char)*(length+1));
-  readXBytes(client_connection_fd, length, (void*)buffer);
-
-  // Then process the data as needed.
+  cout << buffer << endl;
+  ReadXBytes(client_connection_fd, length, (void*)buffer);
 
   string s(buffer);
-  //jcout << buffer << endl;
-
-
-  //jcout << s << endl;
+  cout << buffer << endl;
   Parse parser;
   parser.readFile(s, true);
-  cout << "=======DONE============" << endl;
+  delete[] buffer;
 
-  //Parsing calls here
+ //DB Set-up, if reset == True, drop all tables
 
+  if (parser.reset == true){
+    C = dbRun(1);
+  }
+  else {
+    C = dbRun(0);
+  }
+  //DB insertion calls
 
-  //DB Set-up, if reset == True, drop all tables
+  auto createResults = addAccount(C, &parser.creates);
+  auto balanceResults = balanceCheck(C, &parser.balances);
+  auto transferResults = makeTransfers(C, &parser.transfers);
+  auto queriesResults = makeQueries(C, &parser.queries);
+  C->disconnect();
 
-  // connection *C;
-  //
-  // if (parser.reset == true){
-  //   C = dbRun(1);
-  // }
-  //
-  // else {
-  //   C = dbRun(0);
-  // }
-  //
-  //
-  // //DB insertion calls
-  //
-  // addAccount(C, &parser.creates);
-  // balanceCheck(C, &parser.balances);
-  //
-  // //Send response back to the client
-  // std::string test = "Got your message"; //Test call, will be XML response
-  // send(client_connection_fd, test.c_str(), test.size(), 0);
-  //
-  //
-  //
-  // //Close database connection
-  // C->disconnect();
+  // start constructing reply
+  string reply = "";
+  reply += "<?xml version='1.0' encoding='UTF-8'?>\r\n<results>\r\n";
+  ostringstream resStream;
+  for (auto &createResult : createResults){
+    if (createResult.success && createResult.ref != "") {
+      resStream << "<success " << "ref=\"" << createResult.ref << "\">" << "created</success>\r\n";
+    }
+    else if (createResult.success && createResult.ref == "") {
+      resStream << "<success>created</success>\r\n";
+    }
+    else if (!createResult.success && createResult.ref != "") {
+      resStream << "<error " << "ref=\"" << createResult.ref + "\">" << "not created</error>\r\n";
+    }
+    else if (!createResult.success && createResult.ref == "") {
+      resStream << "<error>not created</error>\r\n";
+    }
+  }
+
+  for (auto &balanceResult : balanceResults){
+    if (balanceResult.success && balanceResult.ref != "") {
+      resStream << "<success " << "ref=\"" << balanceResult.ref << "\">" << to_string(balanceResult.balance) << "</success>\r\n";
+    }
+    else if (balanceResult.success && balanceResult.ref == "") {
+      resStream << "<success>" << to_string(balanceResult.balance) << "</success>\r\n";
+
+    }
+    else if (!balanceResult.success && balanceResult.ref != "") {
+      resStream << "<error " << "ref=\"" << balanceResult.ref << "\">" << "balance not found</error>\r\n";
+    }
+    else if (!balanceResult.success && balanceResult.ref == "") {
+      resStream << "<error>balance not found</error>\r\n";
+    }
+  }
+
+  for (auto &transferResult : transferResults){
+    if (transferResult.success && transferResult.ref != "") {
+      resStream << "<success " << "ref=\"" << transferResult.ref << "\">" << "transferred</success>\r\n";
+    }
+    else if (transferResult.success && transferResult.ref == "") {
+      resStream << "<success>transferred</success>\r\n";
+    }
+    else if (!transferResult.success && transferResult.ref != "") {
+      resStream << "<error " << "ref=\"" << transferResult.ref << "\">" << "not transferred</error>\r\n";
+    }
+    else if (!transferResult.success && transferResult.ref == "") {
+      resStream << "<error>not transferred</error>\r\n";
+    }
+  }
+  reply += resStream.str();
+
+  for (auto &queryResults : queriesResults){
+    if (queryResults->ref != "") {
+      reply += "  <results ref=\"" + queryResults->ref + "\">\r\n";
+    } else {
+      reply += "  <results>\r\n";
+    }
+
+    for (auto &queryResult : queryResults->results){
+      reply += "    <transfer>\r\n";
+      reply += "      <from>" + std::to_string(queryResult->from) +"</from>\r\n";
+      reply += "      <to>" + std::to_string(queryResult->to) +"</to>\r\n";
+      reply += "      <amount>" + std::to_string(queryResult->amount) +"</amount>\r\n";
+      // TODO
+      reply += "    </transfer>\r\n";
+    }
+    reply += "  </results>\r\n";
+  }
+
+  reply += "</results>";
+
+  cout << "OUR REPLY:" << endl;
+  cout << reply << endl;
+  cout << reply.size() << endl;
+  WriteBytes(client_connection_fd, reply);
 }
 
-int ComboMT::run(){
-  // signal(SIGINT, signalHandler);
+int main(int argc, char *argv[]) {
   int status;
   int socket_fd;
   struct addrinfo host_info;
@@ -143,48 +172,45 @@ int ComboMT::run(){
   } //if
 
   socket_fd = socket(host_info_list->ai_family,
-    host_info_list->ai_socktype,
-    host_info_list->ai_protocol);
-    if (socket_fd == -1) {
-      cerr << "Error: cannot create socket" << endl;
-      cerr << "  (" << hostname << "," << port << ")" << endl;
+		     host_info_list->ai_socktype,
+		     host_info_list->ai_protocol);
+  if (socket_fd == -1) {
+    cerr << "Error: cannot create socket" << endl;
+    cerr << "  (" << hostname << "," << port << ")" << endl;
+    return -1;
+  } //if
+
+  int yes = 1;
+  status = setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
+  status = bind(socket_fd, host_info_list->ai_addr, host_info_list->ai_addrlen);
+  if (status == -1) {
+    cerr << "Error: cannot bind socket" << endl;
+    cerr << "  (" << hostname << "," << port << ")" << endl;
+    return -1;
+  } //if
+
+  status = listen(socket_fd, 20);
+  if (status == -1) {
+    cerr << "Error: cannot listen on socket" << endl;
+    cerr << "  (" << hostname << "," << port << ")" << endl;
+    return -1;
+  } //if
+
+
+  struct sockaddr_storage socket_addr;
+  socklen_t socket_addr_len = sizeof(socket_addr);
+
+  while (true){
+    int client_connection_fd = accept(socket_fd, (struct sockaddr *)&socket_addr, &socket_addr_len);
+    if (client_connection_fd == -1) {
+      cerr << "Error: cannot accept connection on socket" << endl;
       return -1;
     } //if
-
-    int yes = 1;
-    status = setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
-    status = bind(socket_fd, host_info_list->ai_addr, host_info_list->ai_addrlen);
-    if (status == -1) {
-      cerr << "Error: cannot bind socket" << endl;
-      cerr << "  (" << hostname << "," << port << ")" << endl;
-      return -1;
-    } //if
-
-    status = listen(socket_fd, 20);
-    if (status == -1) {
-      cerr << "Error: cannot listen on socket" << endl;
-      cerr << "  (" << hostname << "," << port << ")" << endl;
-      return -1;
-    } //if
-
-
-    struct sockaddr_storage socket_addr;
-    socklen_t socket_addr_len = sizeof(socket_addr);
-    int client_connection_fd;
-    while (RUNNING){
-      client_connection_fd = accept(socket_fd, (struct sockaddr *)&socket_addr, &socket_addr_len);
-      if (client_connection_fd == -1) {
-        cerr << "Error: cannot accept connection on socket" << endl;
-        return -1;
-      } //if
-      runningThreads.push_back(std::thread(serviceRequest, client_connection_fd));
-    }
-    //after accept, pthread create
-    freeaddrinfo(host_info_list);
-    close(socket_fd);
-    return 0;
+    std::async(std::launch::async,serviceRequest,client_connection_fd);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
   }
-int main(int argc, char *argv[]) {
-  ComboMT combomt;
-  combomt.run();
+  freeaddrinfo(host_info_list);
+  close(socket_fd);
+  //Close database connection
+  return 0;
 }
