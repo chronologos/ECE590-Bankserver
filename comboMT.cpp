@@ -45,14 +45,14 @@ void serviceRequest(int client_connection_fd){
   // we assume that sizeof(length) will return 4 here.
   ReadXBytes(client_connection_fd, sizeof(length), (void*)(&length));
   length = be64toh(length);
-  cout << length << endl;
+  // cout << length << endl;
   char *buffer = new char[length+1];
   memset(buffer, '\0', sizeof(char)*(length+1));
-  cout << buffer << endl;
+  // cout << buffer << endl;
   ReadXBytes(client_connection_fd, length, (void*)buffer);
 
   string s(buffer);
-  cout << buffer << endl;
+  // cout << buffer << endl;
   Parse parser;
   parser.readFile(s, true);
   delete[] buffer;
@@ -144,9 +144,9 @@ void serviceRequest(int client_connection_fd){
 
   reply += "</results>";
 
-  cout << "OUR REPLY:" << endl;
-  cout << reply << endl;
-  cout << reply.size() << endl;
+  // cout << "OUR REPLY:" << endl;
+  // cout << reply << endl;
+  // cout << reply.size() << endl;
   WriteBytes(client_connection_fd, reply);
 }
 
@@ -207,7 +207,7 @@ int main(int argc, char *argv[]) {
       return -1;
     } //if
     std::async(std::launch::async,serviceRequest,client_connection_fd);
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    // std::this_thread::sleep_for(std::chrono::seconds(1));
   }
   freeaddrinfo(host_info_list);
   close(socket_fd);

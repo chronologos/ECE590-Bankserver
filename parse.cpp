@@ -209,21 +209,21 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
           }
           // cout << "------------------------" << endl;
         }
-        // DEBUG PRINTS
-        cout << "Done! Printing final creates vector:" << endl;
-        for (auto i : creates){
-          cout << "account: " << i.account << ", balance: " << i.balance << ", ref: " << i.ref << endl;
-        }
-        cout << "Printing final balances vector:" << endl;
-        for (auto i : balances){
-          cout << "(" << std::get<0>(i) << "," << std::get<1>(i) << ")" << endl;
-        }
-        cout << "reset is " << (reset? "true" : "false") << endl;
-        cout << "Printing final transfers vector:" << endl;
-        for (auto i : transfers){
-          cout << "ref: " << i.ref << " from: " << i.from << " to: " << i.to << " amount: " << i.amount << endl;
-          cout << "tags:" << endl;
-        }
+        // // DEBUG PRINTS
+        // cout << "Done! Printing final creates vector:" << endl;
+        // for (auto i : creates){
+        //   cout << "account: " << i.account << ", balance: " << i.balance << ", ref: " << i.ref << endl;
+        // }
+        // cout << "Printing final balances vector:" << endl;
+        // for (auto i : balances){
+        //   cout << "(" << std::get<0>(i) << "," << std::get<1>(i) << ")" << endl;
+        // }
+        // cout << "reset is " << (reset? "true" : "false") << endl;
+        // cout << "Printing final transfers vector:" << endl;
+        // for (auto i : transfers){
+        //   cout << "ref: " << i.ref << " from: " << i.from << " to: " << i.to << " amount: " << i.amount << endl;
+        //   cout << "tags:" << endl;
+        // }
       }
 
       catch (xercesc::XMLException &e) {
@@ -452,14 +452,14 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
           }
 
           if (!isParent(node, ll)){
-            cout << "non-nested thing" << endl;
+            // cout << "non-nested thing" << endl;
             std::shared_ptr<Query> newQueryPtr(new Query());
             newQueryPtr->ready = true;
             parseQueryRelop(node, newQueryPtr, op);
             queryPtr->andQueries.push_back(newQueryPtr);
           }
           else {
-            cout << "nested thing" << endl;
+            // cout << "nested thing" << endl;
             std::shared_ptr<Query> newQueryPtr(new Query());
             newQueryPtr->ready = true;
             if (isParent(node,andl)){
@@ -553,7 +553,7 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
       auto orSize = queryPtr->orQueries.size();
       auto notSize = queryPtr->notQueries.size();
       if (andSize != 0) {
-        cout << "aha" << endl;
+        // cout << "aha" << endl;
         res += translateQueryInner(queryPtr->andQueries, "", "AND");
       }
       if (orSize != 0 && andSize != 0){
@@ -590,7 +590,7 @@ void Parse::readFile(string &configFile, bool isString) throw(std::runtime_error
 
           // recurse!
           if (andSize != 0) {
-            cout << "aha" << endl;
+            // cout << "aha" << endl;
             res += translateQueryInner(queries[i]->andQueries, "", "AND");
           }
           if (orSize != 0 && andSize != 0){
