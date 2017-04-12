@@ -192,11 +192,33 @@ vector<transferResult> makeTransfers (connection *C, std::vector<Parse::Transfer
       }
       E2.commit();
     }
+
+    //check if balance is negative
+    if (skip != 1) {
+      string err3 = "SELECT balance FROM accounts WHERE account_num = " +  origin;
+      
+      nontransaction E3(*C);
+      result R3( E3.exec( err3 ));
+      
+      /* List down all the records */
+      for (result::const_iterator c = R3.begin(); c != R3.end(); ++c) {
+	//cout <<c[0].as<string>()<< endl << endl;
+	double accBalance = c[0].as<double>();
+	if ((accBalance < 0) || (accBalance < (*it).amount) ) {
+	  transferresult.success = false;
+	  res.push_back(transferresult);
+	  skip = 1;
+	}
+      }
+      E3.commit();
+    }
+    
     if (skip != 1) {
     
       if (numTags == 0) {
-	sql = "INSERT INTO TRANSFERS (AMOUNT,ORIGIN,DESTINATION)"	\
-	  "VALUES (" + amount + "," + origin + "," + destination + ");";
+	string tag = "blank";
+	sql = "INSERT INTO TRANSFERS (AMOUNT,ORIGIN,DESTINATION, TAG)"	\
+	  "VALUES (" + amount + "," + origin + "," + destination + "," + tag + ");";
 	work W(*C);
 	W.exec( sql );
 	W.commit();
