@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions reset="true">
+  <create ref="0">
+    <account>1234</account>
+    <balance>5</balance>
+  </create>
+  <create ref="0">
+    <account>5678</account>
+    <balance>5</balance>
+  </create>
+  <balance ref="999">
+    <account>999</account>
+  </balance>
+  <transfer ref="2">
+    <from>99</from>
+    <amount>5</amount>
+    <to>999</to>
+    <tag>t1</tag>
+    <tag>goodbye</tag>
+  </transfer>
+</transactions>

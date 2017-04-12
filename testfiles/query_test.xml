@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions reset="true">
+  <create ref="0">
+    <account>1234</account>
+    <balance>5</balance>
+  </create>
+  <create ref="1">
+    <account>5678</account>
+    <balance>5</balance>
+  </create>
+  <balance ref="998">
+    <account>1234</account>
+  </balance>
+  <balance ref="999">
+    <account>5678</account>
+  </balance>
+  <transfer ref="2">
+    <from>1234</from>
+    <amount>5</amount>
+    <to>5678</to>
+    <tag>t1</tag>
+    <tag>goodbye</tag>
+  </transfer>
+  <query ref="4">
+    <and>
+      <equals from="1234"/>
+    </and>
+    <and>
+      <or>
+        <tag info="t1"/>
+      </or>
+      <or>
+        <tag info="t2"/>
+      </or>
+    </and>
+    <and>
+      <equals to="5678"/>
+    </and>
+  </query>
+  <query ref="5">
+    <and>
+      <equals from="0000"/>
+    </and>
+  </query>
+  <query>
+    <and>
+      <equals from="1234"/>
+    </and>
+  </query>
+</transactions>

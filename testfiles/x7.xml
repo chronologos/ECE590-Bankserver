@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<transactions>
+  <transfer ref="0">
+    <from>35755005064</from>
+    <amount>0</amount>
+    <to>43747475459580</to>
+  </transfer>
+</transactions>

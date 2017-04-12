@@ -11,12 +11,15 @@ import random
 import string
 from lxml import etree
 
+NUMBERS = ['1','2','3','4','5','6','7','8','9','0']
 LETTERS = list(string.ascii_lowercase)
-MAX_TXNS_PER_FILE = 1
-MAX_ACCT_BALANCE = 10
+MAX_TXNS_PER_FILE = 2
+TAG_NUMBER_DISTRIBUTION = [0,0,0,0,0,1,1,1,2,2];
+MAX_ACCT_BALANCE = 100
 MAX_QUERIES_PER_FILE = 10
 MAX_BAL_CHECK_PER_FILE = 5
-NUM_ACCTS = 2
+NUM_ACCTS = 100
+NUM_FILES = 10
 
 TEST_FILE_DIR = "./testfiles"
 TEST_FILE_PREFIX = "x"
@@ -33,8 +36,9 @@ class GenTest():
             # xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
             root = etree.Element("transactions", reset="true")
             for i in range(NUM_ACCTS):
-                accountname = "".join([random.choice(LETTERS)
-                                       for i in range(random.randint(2, 10))]) + str(i)
+                accountname = "".join([random.choice(NUMBERS)
+                                       for i in range(random.randint(8, 12))]) + str(i)
+                # this might actually generate dudplicates
                 balance = random.randint(0, MAX_ACCT_BALANCE)
                 self.accounts_balances[accountname] = balance
 
@@ -113,6 +117,12 @@ class GenTest():
                     fromm.text = account1
                     amount = etree.Element("amount")
                     amount.text = str(transfer1_to_2)
+                    num_tags = random.choice(TAG_NUMBER_DISTRIBUTION)
+                    for k in range(num_tags):
+                        tag = etree.Element("tag")
+                        tag.text = "".join([random.choice(LETTERS)
+                                       for i in range(2)])
+                        transfer.append(tag);
                     transfer.append(fromm)
                     transfer.append(amount)
                     transfer.append(to)
@@ -133,7 +143,7 @@ class GenTest():
 def gentest():
     gt = GenTest()
     gt.genPrime(os.path.join(TEST_FILE_DIR,PRIMER_FILE))
-    gt.genTxns(2, TEST_FILE_DIR, TEST_FILE_PREFIX)
+    gt.genTxns(NUM_FILES, TEST_FILE_DIR, TEST_FILE_PREFIX)
     gt.genCheck(os.path.join(TEST_FILE_DIR,CHECK_FILE))
     gt.genCheckResult("./testfiles/check_expected_result.xml")
 
