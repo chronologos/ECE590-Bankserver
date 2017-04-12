@@ -1,6 +1,6 @@
 CC=g++
 CFLAGS=-std=c++11 -g
-EXTRAFLAGS=-lpqxx -lpq -ltcmalloc
+EXTRAFLAGS=-lpqxx -lpq
 
 all: combo
 
